@@ -1,0 +1,1020 @@
+{% extends 'base.html' %}
+
+{% block title %}प्रशासक डैशबोर्ड - इलेक्ट्रिक वाहन प्रबंधक{% endblock %}
+
+{% block extra_js %}
+<script>
+    let trafficChart = null;
+    let batteryChart = null;
+    let pollingInterval = null;
+
+    function loadFleetStats() {
+        fetch('/api/vehicles/fleet_status/')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('fleet-total').textContent = data.total_vehicles;
+                document.getElementById('fleet-driving').textContent = data.driving;
+                document.getElementById('fleet-charging').textContent = data.charging;
+                document.getElementById('fleet-idle').textContent = data.idle;
+                document.getElementById('fleet-avg-battery').textContent = data.average_battery_percentage.toFixed(1) + '%';
+
+                // Update fleet health gauge
+                const healthPercent = ((data.driving + data.charging) / data.total_vehicles * 100) || 0;
+                document.getElementById('health-bar').style.width = healthPercent + '%';
+                document.getElementById('health-text').textContent = healthPercent.toFixed(0) + '%';
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    function loadTrafficData() {
+        fetch('/api/traffic/?ordering=-timestamp&limit=20')
+            .then(response => response.json())
+            .then(data => {
+                const results = data.results || data;
+                if (results.length > 0) {
+                    // Group by section
+                    const sections = {};
+                    results.forEach(snapshot => {
+                        if (!sections[snapshot.expressway_section]) {
+                            sections[snapshot.expressway_section] = [];
+                        }
+                        sections[snapshot.expressway_section].push(snapshot);
+                    });
+
+                    const latestSections = Object.entries(sections).slice(0, 5);
+                    const labels = latestSections.map(([section]) => section);
+                    const speeds = latestSections.map(([_, snapshots]) => snapshots[0].average_speed);
+                    const vehicles = latestSections.map(([_, snapshots]) => snapshots[0].vehicle_count);
+
+                    // Update chart
+                    if (trafficChart) {
+                        trafficChart.data.labels = labels;
+                        trafficChart.data.datasets[0].data = speeds;
+                        trafficChart.data.datasets[1].data = vehicles;
+                        trafficChart.update();
+                    }
+
+                    // Update table
+                    const tableBody = document.getElementById('traffic-table-body');
+                    tableBody.innerHTML = '';
+                    results.slice(0, 10).forEach(snapshot => {
+                        const congestionColor = snapshot.congestion_level === 'heavy' ? 'danger' :
+                                              snapshot.congestion_level === 'moderate' ? 'warning' : 'success';
+                        tableBody.innerHTML += `
+                            <tr>
+                                <td>${snapshot.expressway_section}</td>
+                                <td>${snapshot.vehicle_count}</td>
+                                <td>${snapshot.average_speed.toFixed(1)} km/h</td>
+                                <td><span class="badge bg-${congestionColor}">${snapshot.congestion_level}</span></td>
+                                <td><small>${new Date(snapshot.timestamp).toLocaleTimeString()}</small></td>
+                            </tr>
+                        `;
+                    });
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    function loadBatteryStats() {
+        fetch('/api/vehicles/?limit=100')
+            .then(response => response.json())
+            .then(data => {
+                const vehicles = data.results || data;
+                const ranges = {
+                    'critical': 0,
+                    'low': 0,
+                    'medium': 0,
+                    'high': 0,
+                    'full': 0
+                };
+
+                vehicles.forEach(v => {
+                    if (v.battery_percentage < 20) ranges.critical++;
+                    else if (v.battery_percentage < 40) ranges.low++;
+                    else if (v.battery_percentage < 60) ranges.medium++;
+                    else if (v.battery_percentage < 80) ranges.high++;
+                    else ranges.full++;
+                });
+
+                if (batteryChart) {
+                    batteryChart.data.datasets[0].data = [ranges.critical, ranges.low, ranges.medium, ranges.high, ranges.full];
+                    batteryChart.update();
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    function initCharts() {
+        const trafficCtx = document.getElementById('trafficChart')?.getContext('2d');
+        if (trafficCtx) {
+            trafficChart = new Chart(trafficCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Average Speed (km/h)',
+                            data: [],
+                            backgroundColor: '#1e40af',
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Vehicle Count',
+                            data: [],
+                            backgroundColor: '#ea580c',
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Speed (km/h)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Vehicle Count'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        const batteryCtx = document.getElementById('batteryChart')?.getContext('2d');
+        if (batteryCtx) {
+            batteryChart = new Chart(batteryCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Critical (<20%)', 'Low (20-40%)', 'Medium (40-60%)', 'High (60-80%)', 'Full (80%+)'],
+                    datasets: [{
+                        data: [0, 0, 0, 0, 0],
+                        backgroundColor: [
+                            '#dc2626',
+                            '#ea580c',
+                            '#eab308',
+                            '#84cc16',
+                            '#16a34a'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initCharts();
+        loadFleetStats();
+        loadTrafficData();
+        loadBatteryStats();
+
+        // Refresh every 15 seconds
+        pollingInterval = setInterval(() => {
+            loadFleetStats();
+            loadTrafficData();
+            loadBatteryStats();
+        }, 15000);
+    });
+
+    window.addEventListener('beforeunload', () => {
+        if (pollingInterval) clearInterval(pollingInterval);
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header with gradient background -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div style="background: linear-gradient(135deg, rgba(255,107,53,0.08), rgba(0,70,135,0.08)); padding: 2rem; border-radius: 1rem; margin-bottom: 1rem;">
+                <h1 class="h2" style="color: var(--primary); font-weight: 700; margin-bottom: 0.5rem;">
+                    <i class="fas fa-chart-line" style="margin-right: 0.75rem;"></i> बेड़ा प्रशासन
+                </h1>
+                <p class="text-muted mb-0" style="font-size: 1rem;">रीयल-टाइम विश्लेषण और बेड़ा प्रबंधन</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fleet Statistics -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-2 col-sm-4">
+            <div class="stat-card">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <div class="stat-label">कुल बेड़ा</div>
+                        <div class="stat-value" id="fleet-total">-</div>
+                    </div>
+                    <i class="fas fa-truck" style="font-size: 1.5rem; color: var(--primary); opacity: 0.2;"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-4">
+            <div class="stat-card" style="border-left-color: var(--success);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <div class="stat-label">चलायमान</div>
+                        <div class="stat-value" style="color: var(--success);" id="fleet-driving">-</div>
+                    </div>
+                    <i class="fas fa-road" style="font-size: 1.5rem; color: var(--success); opacity: 0.2;"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-4">
+            <div class="stat-card" style="border-left-color: var(--warning);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <div class="stat-label">चार्जिंग</div>
+                        <div class="stat-value" style="color: var(--warning);" id="fleet-charging">-</div>
+                    </div>
+                    <i class="fas fa-plug" style="font-size: 1.5rem; color: var(--warning); opacity: 0.2;"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card danger">
+                <div class="stat-label">Idle</div>
+                <div class="stat-value" id="fleet-idle">-</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card">
+                <div class="stat-label">Avg Battery</div>
+                <div class="stat-value" id="fleet-avg-battery">-</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card">
+                <div class="stat-label">Fleet Health</div>
+                <div class="progress" style="height: 1.5rem;">
+                    <div id="health-bar" class="progress-bar bg-success" style="width: 0%;"></div>
+                </div>
+                <small id="health-text">0%</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Traffic Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="trafficChart" style="height: 300px;"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-battery-half"></i> Battery Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="batteryChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Traffic Data Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-road"></i> Expressway Traffic Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Section</th>
+                                    <th>Vehicles</th>
+                                    <th>Avg Speed</th>
+                                    <th>Congestion</th>
+                                    <th>Last Update</th>
+                                </tr>
+                            </thead>
+                            <tbody id="traffic-table-body">
+                                <tr><td colspan="5" class="text-center text-muted">Loading traffic data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                <h4 class="alert-heading"><i class="fas fa-info-circle"></i> Dashboard Information</h4>
+                <p>This admin dashboard provides real-time insights into your EV fleet operations:</p>
+                <ul class="mb-0">
+                    <li><strong>Fleet Statistics:</strong> Overview of vehicle status distribution</li>
+                    <li><strong>Traffic Analysis:</strong> Average speed and vehicle density on expressways</li>
+                    <li><strong>Battery Distribution:</strong> Health status of batteries across the fleet</li>
+                    <li><strong>Live Updates:</strong> Data refreshes every 15 seconds</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+<!-- ============================= -->
+<!-- SMART EV STATISTICS -->
+<!-- ============================= -->
+
+<div class="row mb-4 g-3">
+
+    <div class="col-lg-3 col-md-6">
+        <div class="stat-card">
+            <div class="stat-label">
+                <i class="fas fa-brain"></i>
+                AI Fleet Score
+            </div>
+            <div class="stat-value" id="ai-fleet-score">-</div>
+            <small class="text-muted">
+                Overall fleet efficiency
+            </small>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6">
+        <div class="stat-card">
+            <div class="stat-label">
+                <i class="fas fa-charging-station"></i>
+                Available Chargers
+            </div>
+            <div class="stat-value" id="available-chargers">-</div>
+            <small class="text-muted">
+                Across charging network
+            </small>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6">
+        <div class="stat-card">
+            <div class="stat-label">
+                <i class="fas fa-triangle-exclamation"></i>
+                Critical Alerts
+            </div>
+            <div class="stat-value text-danger"
+                 id="critical-alerts">
+                -
+            </div>
+            <small class="text-muted">
+                Require attention
+            </small>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6">
+        <div class="stat-card">
+            <div class="stat-label">
+                <i class="fas fa-leaf"></i>
+                CO₂ Saved
+            </div>
+            <div class="stat-value"
+                 id="co2-saved">
+                -
+            </div>
+            <small class="text-muted">
+                Environmental impact
+            </small>
+        </div>
+    </div>
+
+</div>
+<!-- ============================= -->
+<!-- AI OPERATIONS CENTER -->
+<!-- ============================= -->
+
+<div class="row mb-4">
+
+    <div class="col-lg-8">
+
+        <div class="card h-100">
+
+            <div class="card-header bg-light">
+
+                <h5 class="mb-0">
+                    <i class="fas fa-robot"></i>
+                    AI Operations Center
+                </h5>
+
+            </div>
+
+            <div class="card-body">
+
+                <div id="ai-recommendations">
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Analyzing fleet data...
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="col-lg-4">
+
+        <div class="card h-100">
+
+            <div class="card-header bg-light">
+
+                <h5 class="mb-0">
+                    <i class="fas fa-shield-alt"></i>
+                    Fleet Safety
+                </h5>
+
+            </div>
+
+            <div class="card-body">
+
+                <div class="mb-3">
+
+                    <small>Safety Score</small>
+
+                    <h3 id="safety-score">-</h3>
+
+                    <div class="progress">
+
+                        <div
+                            id="safety-bar"
+                            class="progress-bar bg-success"
+                            style="width:0%">
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <hr>
+
+                <p>
+                    SOS Alerts:
+                    <strong
+                        id="sos-count"
+                        class="text-danger">
+                        -
+                    </strong>
+                </p>
+
+                <p>
+                    Overheating:
+                    <strong id="overheating-count">
+                        -
+                    </strong>
+                </p>
+
+                <p>
+                    Low Battery:
+                    <strong id="low-battery-count">
+                        -
+                    </strong>
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+<div class="row mb-4">
+
+    <div class="col-12">
+
+        <div class="card">
+
+            <div class="card-header bg-light">
+
+                <h5 class="mb-0">
+                    <i class="fas fa-screwdriver-wrench"></i>
+                    Predictive Maintenance
+                </h5>
+
+            </div>
+
+            <div class="card-body">
+
+                <div class="table-responsive">
+
+                    <table class="table table-hover">
+
+                        <thead>
+
+                            <tr>
+                                <th>Vehicle</th>
+                                <th>Battery</th>
+                                <th>Health</th>
+                                <th>Component</th>
+                                <th>Risk</th>
+                                <th>Service Due</th>
+                                <th>Action</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="maintenance-table">
+
+                            <tr>
+                                <td
+                                    colspan="7"
+                                    class="text-center text-muted">
+
+                                    Loading maintenance predictions...
+
+                                </td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+<div class="row mb-4">
+
+    <div class="col-lg-6">
+
+        <div class="card h-100">
+
+            <div class="card-header bg-light">
+
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt"></i>
+                    Charging Network
+                </h5>
+
+            </div>
+
+            <div class="card-body">
+
+                <div class="row text-center">
+
+                    <div class="col-4">
+
+                        <h3 id="station-count">-</h3>
+                        <small>Total Stations</small>
+
+                    </div>
+
+                    <div class="col-4">
+
+                        <h3 id="charger-count">-</h3>
+                        <small>Available</small>
+
+                    </div>
+
+                    <div class="col-4">
+
+                        <h3 id="queue-count">-</h3>
+                        <small>Waiting</small>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="col-lg-6">
+
+        <div class="card h-100">
+
+            <div class="card-header bg-light">
+
+                <h5 class="mb-0">
+                    <i class="fas fa-indian-rupee-sign"></i>
+                    Charging Economics
+                </h5>
+
+            </div>
+
+            <div class="card-body">
+
+                <div class="row text-center">
+
+                    <div class="col-4">
+                        <h3 id="charging-revenue">₹0</h3>
+                        <small>Revenue</small>
+                    </div>
+
+                    <div class="col-4">
+                        <h3 id="energy-delivered">0</h3>
+                        <small>kWh Delivered</small>
+                    </div>
+
+                    <div class="col-4">
+                        <h3 id="charging-sessions">0</h3>
+                        <small>Sessions</small>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+async function loadSmartDashboard() {
+
+    try {
+
+        const [
+            vehicleResponse,
+            stationResponse,
+            alertResponse,
+            chargingResponse
+        ] = await Promise.all([
+
+            fetch('/api/vehicles/?limit=100'),
+            fetch('/api/stations/?limit=100'),
+            fetch('/api/alerts/?resolved=false'),
+            fetch('/api/charging-logs/?limit=100')
+
+        ]);
+
+        const vehicleData =
+            await vehicleResponse.json();
+
+        const stationData =
+            await stationResponse.json();
+
+        const alertData =
+            await alertResponse.json();
+
+        const chargingData =
+            await chargingResponse.json();
+
+
+        const vehicles =
+            vehicleData.results || vehicleData;
+
+        const stations =
+            stationData.results || stationData;
+
+        const alerts =
+            alertData.results || alertData;
+
+        const chargingLogs =
+            chargingData.results || chargingData;
+
+
+        // -------------------------
+        // Charging network
+        // -------------------------
+
+        const availableChargers =
+            stations.reduce(
+                (sum, station) =>
+                    sum +
+                    Number(
+                        station.chargers_available || 0
+                    ),
+                0
+            );
+
+
+        document.getElementById(
+            'station-count'
+        ).textContent =
+            stations.length;
+
+
+        document.getElementById(
+            'charger-count'
+        ).textContent =
+            availableChargers;
+
+
+        document.getElementById(
+            'available-chargers'
+        ).textContent =
+            availableChargers;
+
+
+        // -------------------------
+        // Critical alerts
+        // -------------------------
+
+        const criticalAlerts =
+            alerts.filter(
+                alert =>
+                    alert.severity === 'high'
+            );
+
+
+        document.getElementById(
+            'critical-alerts'
+        ).textContent =
+            criticalAlerts.length;
+
+
+        // -------------------------
+        // Low battery
+        // -------------------------
+
+        const lowBatteryVehicles =
+            vehicles.filter(
+                vehicle =>
+                    Number(
+                        vehicle.battery_percentage
+                    ) < 20
+            );
+
+
+        document.getElementById(
+            'low-battery-count'
+        ).textContent =
+            lowBatteryVehicles.length;
+
+
+        // -------------------------
+        // Charging statistics
+        // -------------------------
+
+        const totalRevenue =
+            chargingLogs.reduce(
+                (sum, session) =>
+                    sum +
+                    Number(session.cost || 0),
+                0
+            );
+
+
+        const totalEnergy =
+            chargingLogs.reduce(
+                (sum, session) =>
+                    sum +
+                    Number(
+                        session.charge_amount || 0
+                    ),
+                0
+            );
+
+
+        document.getElementById(
+            'charging-revenue'
+        ).textContent =
+            `₹${totalRevenue.toFixed(2)}`;
+
+
+        document.getElementById(
+            'energy-delivered'
+        ).textContent =
+            totalEnergy.toFixed(1);
+
+
+        document.getElementById(
+            'charging-sessions'
+        ).textContent =
+            chargingLogs.length;
+
+
+        // -------------------------
+        // Simple fleet score
+        // -------------------------
+
+        const healthyVehicles =
+            vehicles.filter(
+                vehicle =>
+                    Number(
+                        vehicle.battery_percentage
+                    ) >= 40 &&
+                    vehicle.status !== 'maintenance'
+            ).length;
+
+
+        const fleetScore =
+            vehicles.length
+                ? (
+                    healthyVehicles /
+                    vehicles.length
+                  ) * 100
+                : 0;
+
+
+        document.getElementById(
+            'ai-fleet-score'
+        ).textContent =
+            `${fleetScore.toFixed(0)}%`;
+
+
+        generateRecommendations(
+            vehicles,
+            alerts,
+            stations
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            'Smart dashboard error:',
+            error
+        );
+
+    }
+}
+function generateRecommendations(
+    vehicles,
+    alerts,
+    stations
+) {
+
+    const container =
+        document.getElementById(
+            'ai-recommendations'
+        );
+
+    const recommendations = [];
+
+
+    const lowBattery =
+        vehicles.filter(
+            vehicle =>
+                Number(
+                    vehicle.battery_percentage
+                ) < 20
+        );
+
+
+    if (lowBattery.length) {
+
+        recommendations.push(`
+            <div class="alert alert-danger">
+
+                <strong>
+                    Battery Warning
+                </strong>
+
+                <br>
+
+                ${lowBattery.length}
+                vehicle(s) have battery below 20%.
+
+            </div>
+        `);
+
+    }
+
+
+    const maintenance =
+        vehicles.filter(
+            vehicle =>
+                vehicle.status ===
+                'maintenance'
+        );
+
+
+    if (maintenance.length) {
+
+        recommendations.push(`
+            <div class="alert alert-warning">
+
+                <strong>
+                    Maintenance
+                </strong>
+
+                <br>
+
+                ${maintenance.length}
+                vehicle(s) require maintenance.
+
+            </div>
+        `);
+
+    }
+
+
+    const chargerAvailability =
+        stations.reduce(
+            (sum, station) =>
+                sum +
+                Number(
+                    station.chargers_available || 0
+                ),
+            0
+        );
+
+
+    if (chargerAvailability === 0) {
+
+        recommendations.push(`
+            <div class="alert alert-danger">
+
+                <strong>
+                    Charging Network Warning
+                </strong>
+
+                <br>
+
+                No chargers are currently available.
+
+            </div>
+        `);
+
+    }
+
+
+    if (!recommendations.length) {
+
+        recommendations.push(`
+            <div class="alert alert-success">
+
+                <strong>
+                    Fleet Operating Normally
+                </strong>
+
+                <br>
+
+                No critical operational issues
+                detected.
+
+            </div>
+        `);
+
+    }
+
+
+    container.innerHTML =
+        recommendations.join('');
+
+}
+document.addEventListener(
+    'DOMContentLoaded',
+    function() {
+
+        initCharts();
+
+        loadFleetStats();
+        loadTrafficData();
+        loadBatteryStats();
+        loadSmartDashboard();
+
+        pollingInterval =
+            setInterval(() => {
+
+                loadFleetStats();
+                loadTrafficData();
+                loadBatteryStats();
+                loadSmartDashboard();
+
+            }, 15000);
+
+    }
+);

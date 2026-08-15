@@ -1,0 +1,543 @@
+{% extends 'base.html' %}
+
+{% block title %}Weather & Traffic Intelligence - EV Manager India{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <!-- ================= HEADER ================= -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div style="
+                background: linear-gradient(
+                    135deg,
+                    rgba(255,107,53,0.08),
+                    rgba(0,70,135,0.08)
+                );
+                padding: 2rem;
+                border-radius: 1rem;
+            ">
+                <h1 class="h2"
+                    style="
+                        color: var(--primary);
+                        font-weight: 700;
+                        margin-bottom: 0.5rem;
+                    ">
+
+                    <i class="fas fa-cloud-sun"></i>
+                    Weather & Traffic Intelligence
+
+                </h1>
+
+                <p class="text-muted mb-0">
+                    Real-time weather, traffic conditions,
+                    EV battery impact and AI-powered route intelligence
+                </p>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================= SMART CONTROLS ================= -->
+    <div class="row g-3 mb-4">
+
+        <!-- City + Refresh + Location -->
+        <div class="col-lg-8">
+
+            <div class="card h-100 shadow-sm">
+
+                <div class="card-header"
+                     style="
+                        background: linear-gradient(
+                            90deg,
+                            var(--primary),
+                            var(--secondary),
+                            var(--success)
+                        );
+                        color: white;
+                     ">
+
+                    <h5 class="mb-0">
+                        <i class="fas fa-satellite-dish"></i>
+                        Live Intelligence Controls
+                    </h5>
+
+                </div>
+
+                <div class="card-body">
+
+                    <div class="row g-3">
+
+                        <!-- City -->
+                        <div class="col-md-5">
+
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-city"></i>
+                                Select City
+                            </label>
+
+                            <select
+                                id="weatherCity"
+                                class="form-select"
+                                onchange="changeCity()">
+
+                                <option value="Delhi">Delhi</option>
+                                <option value="Aligarh">Aligarh</option>
+                                <option value="Noida">Noida</option>
+                                <option value="Agra">Agra</option>
+                                <option value="Lucknow">Lucknow</option>
+                                <option value="Jaipur">Jaipur</option>
+                                <option value="Bareilly">Bareilly</option>
+                                <option value="Kanpur">Kanpur</option>
+                                <option value="Mumbai">Mumbai</option>
+                                <option value="Pune">Pune</option>
+                                <option value="Bengaluru">Bengaluru</option>
+                                <option value="Hyderabad">Hyderabad</option>
+                                <option value="Chennai">Chennai</option>
+                                <option value="Kolkata">Kolkata</option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- Auto Refresh -->
+                        <div class="col-md-4">
+
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-rotate"></i>
+                                Auto Refresh
+                            </label>
+
+                            <select
+                                id="refreshInterval"
+                                class="form-select"
+                                onchange="setAutoRefresh()">
+
+                                <option value="0">
+                                    Off
+                                </option>
+
+                                <option value="60000">
+                                    Every 1 minute
+                                </option>
+
+                                <option value="300000">
+                                    Every 5 minutes
+                                </option>
+
+                                <option value="600000">
+                                    Every 10 minutes
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- Location -->
+                        <div class="col-md-3 d-flex align-items-end">
+
+                            <button
+                                type="button"
+                                class="btn btn-primary w-100"
+                                onclick="useMyLocation()">
+
+                                <i class="fas fa-location-crosshairs"></i>
+                                My Location
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Location Result -->
+                    <div
+                        id="locationResult"
+                        class="alert alert-light border mt-3 mb-0"
+                        style="display:none;">
+
+                        <i class="fas fa-map-marker-alt text-danger"></i>
+
+                        <strong>
+                            Current Location:
+                        </strong>
+
+                        <span id="currentCoordinates">
+                            Detecting...
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- Last Update -->
+        <div class="col-lg-4">
+
+            <div class="card h-100 shadow-sm">
+
+                <div class="card-header bg-dark text-white">
+
+                    <h5 class="mb-0">
+                        <i class="fas fa-clock"></i>
+                        System Status
+                    </h5>
+
+                </div>
+
+                <div class="card-body">
+
+                    <small class="text-muted">
+                        Last Intelligence Update
+                    </small>
+
+                    <h6
+                        id="lastUpdated"
+                        class="mt-2">
+
+                        Loading...
+
+                    </h6>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between">
+
+                        <span>
+                            Weather
+                        </span>
+
+                        <span class="badge bg-success">
+                            Online
+                        </span>
+
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-2">
+
+                        <span>
+                            Traffic
+                        </span>
+
+                        <span class="badge bg-success">
+                            Online
+                        </span>
+
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-2">
+
+                        <span>
+                            AI Engine
+                        </span>
+
+                        <span class="badge bg-primary">
+                            Active
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ================= WEATHER OVERVIEW ================= -->
+
+    <!-- KEEP YOUR EXISTING WEATHER OVERVIEW CODE HERE -->
+
+
+    <!-- ================= TRAFFIC STATUS ================= -->
+
+    <!-- KEEP YOUR EXISTING TRAFFIC CODE HERE -->
+
+
+    <!-- ================= ROAD INCIDENTS ================= -->
+
+    <!-- KEEP YOUR EXISTING ROAD INCIDENT CODE HERE -->
+
+
+    <!-- ================= ROUTE WEATHER IMPACT ================= -->
+
+    <!-- KEEP YOUR EXISTING ROUTE TABLE HERE -->
+
+
+    <!-- ================= 7 DAY CHART ================= -->
+
+    <!-- KEEP YOUR EXISTING CHART HERE -->
+
+
+</div>
+
+
+<script>
+
+let refreshTimer = null;
+
+
+/* ==========================================
+   CHANGE CITY
+========================================== */
+
+function changeCity() {
+
+    const city =
+        document.getElementById("weatherCity").value;
+
+    console.log(
+        "Loading weather intelligence for:",
+        city
+    );
+
+    updateTimestamp();
+
+    /*
+        Later connect Django API:
+
+        fetch(`/api/weather/?city=${city}`)
+
+        Then update:
+        temperature
+        humidity
+        traffic
+        battery impact
+        AQI
+        road condition
+    */
+
+}
+
+
+/* ==========================================
+   UPDATE TIME
+========================================== */
+
+function updateTimestamp() {
+
+    const now =
+        new Date();
+
+    document.getElementById(
+        "lastUpdated"
+    ).innerHTML = `
+
+        <i class="fas fa-calendar-alt text-primary"></i>
+
+        ${now.toLocaleString("en-IN")}
+
+    `;
+
+}
+
+
+/* ==========================================
+   AUTO REFRESH
+========================================== */
+
+function setAutoRefresh() {
+
+    const interval =
+        Number(
+            document.getElementById(
+                "refreshInterval"
+            ).value
+        );
+
+
+    if (refreshTimer) {
+
+        clearInterval(
+            refreshTimer
+        );
+
+        refreshTimer = null;
+
+    }
+
+
+    if (interval > 0) {
+
+        refreshTimer =
+            setInterval(() => {
+
+                changeCity();
+
+                console.log(
+                    "Weather & traffic automatically refreshed."
+                );
+
+            }, interval);
+
+    }
+
+}
+
+
+/* ==========================================
+   CURRENT GPS LOCATION
+========================================== */
+
+function useMyLocation() {
+
+    const result =
+        document.getElementById(
+            "locationResult"
+        );
+
+    const coordinates =
+        document.getElementById(
+            "currentCoordinates"
+        );
+
+
+    result.style.display =
+        "block";
+
+
+    coordinates.innerHTML = `
+
+        <span class="spinner-border
+                     spinner-border-sm
+                     text-primary">
+        </span>
+
+        Detecting GPS location...
+
+    `;
+
+
+    if (!navigator.geolocation) {
+
+        coordinates.innerHTML =
+            "Geolocation is not supported by this browser.";
+
+        return;
+
+    }
+
+
+    navigator.geolocation.getCurrentPosition(
+
+        function(position) {
+
+            const latitude =
+                position.coords.latitude;
+
+            const longitude =
+                position.coords.longitude;
+
+
+            coordinates.innerHTML = `
+
+                Latitude:
+                <strong>
+                    ${latitude.toFixed(5)}
+                </strong>
+
+                &nbsp; | &nbsp;
+
+                Longitude:
+                <strong>
+                    ${longitude.toFixed(5)}
+                </strong>
+
+            `;
+
+
+            /*
+               Later call Django:
+
+               fetch(
+                 `/api/weather/current-location/
+                 ?lat=${latitude}&lon=${longitude}`
+               )
+
+            */
+
+
+            updateTimestamp();
+
+        },
+
+
+        function(error) {
+
+            let message =
+                "Unable to detect location.";
+
+
+            if (error.code === 1) {
+
+                message =
+                    "Location permission was denied.";
+
+            }
+
+            else if (error.code === 2) {
+
+                message =
+                    "Location information is unavailable.";
+
+            }
+
+            else if (error.code === 3) {
+
+                message =
+                    "Location request timed out.";
+
+            }
+
+
+            coordinates.innerHTML = `
+
+                <span class="text-danger">
+
+                    <i class="fas fa-triangle-exclamation"></i>
+
+                    ${message}
+
+                </span>
+
+            `;
+
+        },
+
+
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000
+        }
+
+    );
+
+}
+
+
+/* ==========================================
+   INITIAL PAGE LOAD
+========================================== */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function() {
+
+        updateTimestamp();
+
+    }
+);
+
+</script>
+
+{% endblock %}

@@ -1,0 +1,2493 @@
+{% extends 'base.html' %}
+
+{% block title %}Vehicle Management - EV Manager India{% endblock %}
+
+{% block content %}
+
+<style>
+    .vehicle-hero {
+        background: linear-gradient(
+            135deg,
+            rgba(255,107,53,0.08),
+            rgba(0,70,135,0.08)
+        );
+        padding: 2rem;
+        border-radius: 1rem;
+    }
+
+    .summary-card {
+        border: none;
+        border-radius: 16px;
+        transition: 0.3s;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+    }
+
+    .summary-card:hover {
+        transform: translateY(-4px);
+    }
+
+    .vehicle-card {
+        border: none;
+        border-radius: 16px;
+        overflow: hidden;
+        transition: 0.3s;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.07);
+    }
+
+    .vehicle-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    }
+
+    .vehicle-header {
+        background: linear-gradient(
+            90deg,
+            var(--primary),
+            var(--secondary),
+            var(--success)
+        );
+        color: white;
+    }
+
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        font-size: 22px;
+    }
+
+    .battery-good {
+        color: #198754;
+    }
+
+    .battery-medium {
+        color: #ffc107;
+    }
+
+    .battery-low {
+        color: #dc3545;
+    }
+
+    .vehicle-action-btn {
+        margin: 2px;
+    }
+
+    .detail-box {
+        background: rgba(0,0,0,0.025);
+        border-radius: 10px;
+        padding: 15px;
+        height: 100%;
+    }
+
+    .empty-state {
+        padding: 60px 20px;
+        text-align: center;
+    }
+
+    .empty-state i {
+        font-size: 55px;
+        color: #adb5bd;
+        margin-bottom: 15px;
+    }
+</style>
+
+
+<div class="container-fluid py-4">
+
+    <!-- ===================================================== -->
+    <!-- HEADER -->
+    <!-- ===================================================== -->
+
+    <div class="row mb-4">
+        <div class="col-12">
+
+            <div class="vehicle-hero">
+
+                <div class="d-flex flex-column flex-md-row
+                            justify-content-between align-items-md-center">
+
+                    <div>
+
+                        <h1 class="h2"
+                            style="color: var(--primary);
+                                   font-weight:700;">
+
+                            <i class="fas fa-car"></i>
+                            My Vehicles
+
+                        </h1>
+
+                        <p class="text-muted mb-0">
+
+                            Smart EV fleet management with battery,
+                            range, health, charging and AI insights
+
+                        </p>
+
+                    </div>
+
+                    <div class="mt-3 mt-md-0">
+
+                        <button
+                            class="btn btn-outline-secondary me-2"
+                            onclick="loadVehicles()">
+
+                            <i class="fas fa-rotate"></i>
+                            Refresh
+
+                        </button>
+
+                        <button
+                            class="btn"
+                            style="background:var(--primary);
+                                   color:white;"
+                            data-bs-toggle="modal"
+                            data-bs-target="#addVehicleModal">
+
+                            <i class="fas fa-plus"></i>
+                            Add Vehicle
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- FLEET SUMMARY -->
+    <!-- ===================================================== -->
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-xl-3 col-md-6">
+
+            <div class="card summary-card h-100">
+
+                <div class="card-body d-flex
+                            justify-content-between align-items-center">
+
+                    <div>
+
+                        <small class="text-muted">
+                            Total Vehicles
+                        </small>
+
+                        <h3 id="totalVehicles"
+                            class="mb-0">
+
+                            0
+
+                        </h3>
+
+                    </div>
+
+                    <div class="stat-icon bg-primary-subtle
+                                text-primary">
+
+                        <i class="fas fa-car"></i>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-xl-3 col-md-6">
+
+            <div class="card summary-card h-100">
+
+                <div class="card-body d-flex
+                            justify-content-between align-items-center">
+
+                    <div>
+
+                        <small class="text-muted">
+                            Driving
+                        </small>
+
+                        <h3 id="drivingVehicles"
+                            class="mb-0">
+
+                            0
+
+                        </h3>
+
+                    </div>
+
+                    <div class="stat-icon bg-success-subtle
+                                text-success">
+
+                        <i class="fas fa-road"></i>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-xl-3 col-md-6">
+
+            <div class="card summary-card h-100">
+
+                <div class="card-body d-flex
+                            justify-content-between align-items-center">
+
+                    <div>
+
+                        <small class="text-muted">
+                            Charging
+                        </small>
+
+                        <h3 id="chargingVehicles"
+                            class="mb-0">
+
+                            0
+
+                        </h3>
+
+                    </div>
+
+                    <div class="stat-icon bg-warning-subtle
+                                text-warning">
+
+                        <i class="fas fa-bolt"></i>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-xl-3 col-md-6">
+
+            <div class="card summary-card h-100">
+
+                <div class="card-body d-flex
+                            justify-content-between align-items-center">
+
+                    <div>
+
+                        <small class="text-muted">
+                            Need Attention
+                        </small>
+
+                        <h3 id="attentionVehicles"
+                            class="mb-0">
+
+                            0
+
+                        </h3>
+
+                    </div>
+
+                    <div class="stat-icon bg-danger-subtle
+                                text-danger">
+
+                        <i class="fas fa-triangle-exclamation"></i>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- SEARCH / FILTER -->
+    <!-- ===================================================== -->
+
+    <div class="card mb-4">
+
+        <div class="card-body">
+
+            <div class="row g-3">
+
+                <div class="col-lg-6">
+
+                    <label class="form-label">
+                        Search Vehicle
+                    </label>
+
+                    <div class="input-group">
+
+                        <span class="input-group-text">
+
+                            <i class="fas fa-search"></i>
+
+                        </span>
+
+                        <input
+                            type="text"
+                            id="vehicleSearch"
+                            class="form-control"
+                            placeholder="Search by vehicle name..."
+                            oninput="filterVehicles()">
+
+                    </div>
+
+                </div>
+
+
+                <div class="col-lg-4">
+
+                    <label class="form-label">
+                        Vehicle Status
+                    </label>
+
+                    <select
+                        id="statusFilter"
+                        class="form-select"
+                        onchange="filterVehicles()">
+
+                        <option value="">
+                            All Status
+                        </option>
+
+                        <option value="idle">
+                            Idle
+                        </option>
+
+                        <option value="driving">
+                            Driving
+                        </option>
+
+                        <option value="charging">
+                            Charging
+                        </option>
+
+                        <option value="maintenance">
+                            Maintenance
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="col-lg-2 d-flex align-items-end">
+
+                    <button
+                        class="btn btn-outline-secondary w-100"
+                        onclick="clearFilters()">
+
+                        <i class="fas fa-filter-circle-xmark"></i>
+                        Clear
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- LOADING -->
+    <!-- ===================================================== -->
+
+    <div id="vehicleLoading"
+         class="text-center py-5">
+
+        <div class="spinner-border text-primary"></div>
+
+        <p class="text-muted mt-3">
+
+            Loading your EV fleet...
+
+        </p>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- ERROR -->
+    <!-- ===================================================== -->
+
+    <div id="vehicleError"
+         class="alert alert-danger d-none">
+
+        <i class="fas fa-triangle-exclamation"></i>
+
+        Unable to load vehicles.
+
+        <button
+            class="btn btn-sm btn-danger ms-2"
+            onclick="loadVehicles()">
+
+            Retry
+
+        </button>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- VEHICLE CARDS -->
+    <!-- ===================================================== -->
+
+    <div class="row"
+         id="vehicles-container">
+    </div>
+
+</div>
+
+
+<!-- ========================================================= -->
+<!-- ADD VEHICLE MODAL -->
+<!-- ========================================================= -->
+
+<div class="modal fade"
+     id="addVehicleModal"
+     tabindex="-1">
+
+    <div class="modal-dialog modal-lg">
+
+        <div class="modal-content">
+
+            <div class="modal-header vehicle-header">
+
+                <h5 class="modal-title">
+
+                    <i class="fas fa-car-side"></i>
+                    Add New EV
+
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close btn-close-white"
+                    data-bs-dismiss="modal">
+                </button>
+
+            </div>
+
+
+            <div class="modal-body">
+
+                <form id="addVehicleForm">
+
+                    <div class="row g-3">
+
+
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+                                Vehicle Model
+                            </label>
+
+                            <select
+                                class="form-select"
+                                id="vehicleType"
+                                required>
+
+                                <option value="">
+                                    Select Vehicle
+                                </option>
+
+                                <option value="Tata Nexon EV">
+                                    Tata Nexon EV
+                                </option>
+
+                                <option value="Tata Punch EV">
+                                    Tata Punch EV
+                                </option>
+
+                                <option value="Tata Tiago EV">
+                                    Tata Tiago EV
+                                </option>
+
+                                <option value="Mahindra XUV400">
+                                    Mahindra XUV400
+                                </option>
+
+                                <option value="Mahindra BE 6">
+                                    Mahindra BE 6
+                                </option>
+
+                                <option value="Mahindra XEV 9e">
+                                    Mahindra XEV 9e
+                                </option>
+
+                                <option value="MG ZS EV">
+                                    MG ZS EV
+                                </option>
+
+                                <option value="MG Windsor EV">
+                                    MG Windsor EV
+                                </option>
+
+                                <option value="Hyundai Ioniq 5">
+                                    Hyundai Ioniq 5
+                                </option>
+
+                                <option value="Hyundai Creta Electric">
+                                    Hyundai Creta Electric
+                                </option>
+
+                                <option value="BYD Atto 3">
+                                    BYD Atto 3
+                                </option>
+
+                                <option value="BYD Seal">
+                                    BYD Seal
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+                                Battery Capacity (kWh)
+                            </label>
+
+                            <input
+                                type="number"
+                                step="0.1"
+                                min="1"
+                                class="form-control"
+                                id="batteryCapacity"
+                                value="40"
+                                required>
+
+                        </div>
+
+
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+                                Registration Number
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="registrationNumber"
+                                placeholder="UP-81-AB-1234">
+
+                        </div>
+
+
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+                                Vehicle Color
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="vehicleColor"
+                                placeholder="White">
+
+                        </div>
+
+
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+                                Registration Year
+                            </label>
+
+                            <input
+                                type="number"
+                                class="form-control"
+                                id="registrationYear"
+                                min="2015"
+                                max="2030"
+                                value="2026">
+
+                        </div>
+
+
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+                                Current Mileage (km)
+                            </label>
+
+                            <input
+                                type="number"
+                                min="0"
+                                class="form-control"
+                                id="mileage"
+                                value="0">
+
+                        </div>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+
+            <div class="modal-footer">
+
+                <button
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal">
+
+                    Cancel
+
+                </button>
+
+                <button
+                    id="addVehicleButton"
+                    class="btn"
+                    style="background:var(--primary);
+                           color:white;"
+                    onclick="addVehicle()">
+
+                    <i class="fas fa-plus"></i>
+                    Add Vehicle
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ========================================================= -->
+<!-- VEHICLE DETAILS MODAL -->
+<!-- ========================================================= -->
+
+<div class="modal fade"
+     id="vehicleDetailsModal"
+     tabindex="-1">
+
+    <div class="modal-dialog modal-xl">
+
+        <div class="modal-content">
+
+            <div class="modal-header vehicle-header">
+
+                <h5 class="modal-title">
+
+                    <i class="fas fa-car"></i>
+                    Vehicle Intelligence
+
+                </h5>
+
+                <button
+                    class="btn-close btn-close-white"
+                    data-bs-dismiss="modal">
+                </button>
+
+            </div>
+
+
+            <div class="modal-body"
+                 id="vehicleDetailsContent">
+
+                <div class="text-center py-5">
+
+                    <div class="spinner-border text-primary"></div>
+
+                    <p class="mt-3 text-muted">
+                        Loading vehicle information...
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ========================================================= -->
+<!-- JAVASCRIPT -->
+<!-- ========================================================= -->
+
+<script>
+
+let allVehicles = [];
+
+
+// ============================================================
+// CSRF TOKEN
+// ============================================================
+
+function getCookie(name) {
+
+    let cookieValue = null;
+
+    if (document.cookie && document.cookie !== '') {
+
+        const cookies = document.cookie.split(';');
+
+        for (let cookie of cookies) {
+
+            cookie = cookie.trim();
+
+            if (
+                cookie.substring(0, name.length + 1)
+                === name + '='
+            ) {
+
+                cookieValue =
+                    decodeURIComponent(
+                        cookie.substring(name.length + 1)
+                    );
+
+                break;
+            }
+        }
+    }
+
+    return cookieValue;
+}
+
+
+// ============================================================
+// SAFE HTML
+// ============================================================
+
+function escapeHTML(value) {
+
+    const div = document.createElement('div');
+
+    div.textContent = value ?? '';
+
+    return div.innerHTML;
+}
+
+
+// ============================================================
+// API DATA HANDLER
+// Works with pagination and normal arrays
+// ============================================================
+
+function getResults(data) {
+
+    if (Array.isArray(data)) {
+        return data;
+    }
+
+    return data.results || [];
+}
+
+
+// ============================================================
+// BATTERY PERCENTAGE
+// ============================================================
+
+function getBatteryPercentage(vehicle) {
+
+    if (
+        vehicle.battery_percentage !== undefined &&
+        vehicle.battery_percentage !== null
+    ) {
+
+        return Number(vehicle.battery_percentage);
+
+    }
+
+    const capacity =
+        Number(vehicle.battery_capacity || 0);
+
+    const charge =
+        Number(vehicle.current_charge || 0);
+
+    if (capacity <= 0) {
+        return 0;
+    }
+
+    return Math.min(
+        100,
+        Math.max(
+            0,
+            (charge / capacity) * 100
+        )
+    );
+}
+
+
+// ============================================================
+// BATTERY COLOR
+// ============================================================
+
+function batteryColor(percentage) {
+
+    if (percentage <= 20) {
+        return '#dc3545';
+    }
+
+    if (percentage <= 50) {
+        return '#ffc107';
+    }
+
+    return '#198754';
+}
+
+
+// ============================================================
+// STATUS BADGE
+// ============================================================
+
+function statusBadge(status) {
+
+    const value =
+        String(status || 'idle').toLowerCase();
+
+    const classes = {
+
+        driving: 'bg-success',
+
+        charging:
+            'bg-warning text-dark',
+
+        maintenance:
+            'bg-danger',
+
+        idle:
+            'bg-secondary'
+
+    };
+
+    return `
+        <span class="badge
+        ${classes[value] || 'bg-secondary'}">
+
+            ${escapeHTML(
+                value.charAt(0).toUpperCase()
+                + value.slice(1)
+            )}
+
+        </span>
+    `;
+}
+
+
+// ============================================================
+// ESTIMATED RANGE
+// Basic local estimate
+// ============================================================
+
+function estimatedRange(vehicle) {
+
+    const battery =
+        Number(vehicle.current_charge || 0);
+
+    /*
+       Simple estimate:
+       approximately 6 km/kWh.
+
+       Later you can replace this with
+       your AI range prediction API.
+    */
+
+    return Math.round(battery * 6);
+}
+
+
+// ============================================================
+// HEALTH SCORE
+// ============================================================
+
+function calculateHealth(vehicle) {
+
+    const battery =
+        getBatteryPercentage(vehicle);
+
+    let health = 95;
+
+    if (battery < 20) {
+        health -= 15;
+    }
+
+    if (vehicle.status === 'maintenance') {
+        health -= 30;
+    }
+
+    return Math.max(
+        0,
+        Math.min(100, health)
+    );
+}
+
+
+// ============================================================
+// LOAD VEHICLES
+// ============================================================
+
+async function loadVehicles() {
+
+    const loading =
+        document.getElementById(
+            'vehicleLoading'
+        );
+
+    const error =
+        document.getElementById(
+            'vehicleError'
+        );
+
+    const container =
+        document.getElementById(
+            'vehicles-container'
+        );
+
+    loading.classList.remove('d-none');
+    error.classList.add('d-none');
+
+    container.innerHTML = '';
+
+    try {
+
+        const response =
+            await fetch('/api/vehicles/');
+
+        if (!response.ok) {
+
+            throw new Error(
+                `HTTP ${response.status}`
+            );
+        }
+
+        const data =
+            await response.json();
+
+        allVehicles =
+            getResults(data);
+
+        updateSummary();
+
+        renderVehicles(allVehicles);
+
+    }
+
+    catch (err) {
+
+        console.error(
+            'Vehicle API error:',
+            err
+        );
+
+        error.classList.remove('d-none');
+
+    }
+
+    finally {
+
+        loading.classList.add('d-none');
+
+    }
+}
+
+
+// ============================================================
+// FLEET SUMMARY
+// ============================================================
+
+function updateSummary() {
+
+    const driving =
+        allVehicles.filter(
+            v => v.status === 'driving'
+        ).length;
+
+    const charging =
+        allVehicles.filter(
+            v => v.status === 'charging'
+        ).length;
+
+    const attention =
+        allVehicles.filter(v => {
+
+            return (
+                getBatteryPercentage(v) <= 20 ||
+                v.status === 'maintenance'
+            );
+
+        }).length;
+
+
+    document.getElementById(
+        'totalVehicles'
+    ).textContent =
+        allVehicles.length;
+
+
+    document.getElementById(
+        'drivingVehicles'
+    ).textContent =
+        driving;
+
+
+    document.getElementById(
+        'chargingVehicles'
+    ).textContent =
+        charging;
+
+
+    document.getElementById(
+        'attentionVehicles'
+    ).textContent =
+        attention;
+}
+
+
+// ============================================================
+// RENDER VEHICLES
+// ============================================================
+
+function renderVehicles(vehicles) {
+
+    const container =
+        document.getElementById(
+            'vehicles-container'
+        );
+
+    container.innerHTML = '';
+
+
+    if (!vehicles.length) {
+
+        container.innerHTML = `
+
+            <div class="col-12">
+
+                <div class="card">
+
+                    <div class="empty-state">
+
+                        <i class="fas fa-car-side"></i>
+
+                        <h4>
+                            No vehicles found
+                        </h4>
+
+                        <p class="text-muted">
+
+                            Add your first EV to start
+                            battery, trip and charging
+                            management.
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+        `;
+
+        return;
+    }
+
+
+    vehicles.forEach(vehicle => {
+
+        const battery =
+            getBatteryPercentage(vehicle);
+
+        const range =
+            estimatedRange(vehicle);
+
+        const health =
+            calculateHealth(vehicle);
+
+        const speed =
+            Number(vehicle.speed || 0);
+
+        const charge =
+            Number(
+                vehicle.current_charge || 0
+            );
+
+        const capacity =
+            Number(
+                vehicle.battery_capacity || 0
+            );
+
+
+        const card =
+            document.createElement('div');
+
+        card.className =
+            'col-xl-4 col-lg-6 mb-4';
+
+
+        card.innerHTML = `
+
+        <div class="card vehicle-card h-100">
+
+            <div class="card-header vehicle-header">
+
+                <div class="d-flex
+                            justify-content-between
+                            align-items-center">
+
+                    <div>
+
+                        <h5 class="mb-1">
+
+                            <i class="fas fa-car-side"></i>
+
+                            ${escapeHTML(
+                                vehicle.vehicle_type
+                            )}
+
+                        </h5>
+
+                        <small>
+
+                            Vehicle ID:
+                            #${vehicle.id}
+
+                        </small>
+
+                    </div>
+
+                    ${statusBadge(
+                        vehicle.status
+                    )}
+
+                </div>
+
+            </div>
+
+
+            <div class="card-body">
+
+                <!-- Battery -->
+
+                <div class="mb-3">
+
+                    <div class="d-flex
+                                justify-content-between">
+
+                        <span>
+
+                            <i class="fas fa-battery-three-quarters"></i>
+
+                            Battery
+
+                        </span>
+
+                        <strong>
+
+                            ${battery.toFixed(0)}%
+
+                        </strong>
+
+                    </div>
+
+
+                    <div class="progress mt-2"
+                         style="height:9px;">
+
+                        <div
+                            class="progress-bar"
+
+                            style="
+                                width:${battery}%;
+                                background:
+                                ${batteryColor(battery)};
+                            ">
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Main statistics -->
+
+                <div class="row text-center mb-3">
+
+                    <div class="col-4">
+
+                        <small class="text-muted">
+                            Charge
+                        </small>
+
+                        <p class="mb-0">
+
+                            <strong>
+                                ${charge.toFixed(1)}
+                            </strong>
+
+                            kWh
+
+                        </p>
+
+                    </div>
+
+
+                    <div class="col-4">
+
+                        <small class="text-muted">
+                            Range
+                        </small>
+
+                        <p class="mb-0">
+
+                            <strong>
+                                ${range}
+                            </strong>
+
+                            km
+
+                        </p>
+
+                    </div>
+
+
+                    <div class="col-4">
+
+                        <small class="text-muted">
+                            Speed
+                        </small>
+
+                        <p class="mb-0">
+
+                            <strong>
+                                ${speed.toFixed(0)}
+                            </strong>
+
+                            km/h
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <hr>
+
+
+                <div class="row">
+
+                    <div class="col-6">
+
+                        <small class="text-muted">
+                            Battery Capacity
+                        </small>
+
+                        <p>
+
+                            <strong>
+                                ${capacity.toFixed(1)}
+                                kWh
+                            </strong>
+
+                        </p>
+
+                    </div>
+
+
+                    <div class="col-6">
+
+                        <small class="text-muted">
+                            AI Health Score
+                        </small>
+
+                        <p>
+
+                            <strong
+                                class="${
+                                    health >= 80
+                                    ? 'text-success'
+                                    : health >= 60
+                                    ? 'text-warning'
+                                    : 'text-danger'
+                                }">
+
+                                ${health}%
+
+                            </strong>
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                ${
+                    battery <= 20
+                    ? `
+
+                    <div class="alert
+                                alert-warning
+                                py-2">
+
+                        <i class="fas
+                                  fa-triangle-exclamation">
+                        </i>
+
+                        Low battery.
+                        Charging recommended.
+
+                    </div>
+
+                    `
+                    : ''
+                }
+
+
+                ${
+                    vehicle.status ===
+                    'maintenance'
+                    ? `
+
+                    <div class="alert
+                                alert-danger
+                                py-2">
+
+                        <i class="fas fa-wrench"></i>
+
+                        Vehicle requires
+                        maintenance.
+
+                    </div>
+
+                    `
+                    : ''
+                }
+
+            </div>
+
+
+            <!-- Actions -->
+
+            <div class="card-footer bg-light">
+
+                <button
+                    class="btn btn-sm btn-primary
+                           vehicle-action-btn"
+
+                    data-bs-toggle="modal"
+
+                    data-bs-target="#vehicleDetailsModal"
+
+                    onclick="
+                        loadVehicleDetails(
+                            ${vehicle.id}
+                        )
+                    ">
+
+                    <i class="fas fa-chart-line"></i>
+                    Details
+
+                </button>
+
+
+                <button
+                    class="btn btn-sm
+                           btn-outline-success
+                           vehicle-action-btn"
+
+                    onclick="
+                        trackVehicle(
+                            ${vehicle.id}
+                        )
+                    ">
+
+                    <i class="fas fa-location-dot"></i>
+                    Track
+
+                </button>
+
+
+                <button
+                    class="btn btn-sm
+                           btn-outline-warning
+                           vehicle-action-btn"
+
+                    onclick="
+                        findCharger(
+                            ${vehicle.id}
+                        )
+                    ">
+
+                    <i class="fas fa-charging-station"></i>
+                    Charger
+
+                </button>
+
+
+                <button
+                    class="btn btn-sm
+                           btn-outline-danger
+                           vehicle-action-btn"
+
+                    onclick="
+                        deleteVehicle(
+                            ${vehicle.id}
+                        )
+                    ">
+
+                    <i class="fas fa-trash"></i>
+
+                </button>
+
+            </div>
+
+        </div>
+        `;
+
+
+        container.appendChild(card);
+
+    });
+}
+
+
+// ============================================================
+// FILTER
+// ============================================================
+
+function filterVehicles() {
+
+    const search =
+        document.getElementById(
+            'vehicleSearch'
+        ).value.toLowerCase();
+
+
+    const status =
+        document.getElementById(
+            'statusFilter'
+        ).value;
+
+
+    const filtered =
+        allVehicles.filter(vehicle => {
+
+            const vehicleName =
+                String(
+                    vehicle.vehicle_type || ''
+                ).toLowerCase();
+
+
+            const matchesSearch =
+                vehicleName.includes(search);
+
+
+            const matchesStatus =
+                !status ||
+                vehicle.status === status;
+
+
+            return (
+                matchesSearch &&
+                matchesStatus
+            );
+
+        });
+
+
+    renderVehicles(filtered);
+}
+
+
+// ============================================================
+// CLEAR FILTER
+// ============================================================
+
+function clearFilters() {
+
+    document.getElementById(
+        'vehicleSearch'
+    ).value = '';
+
+
+    document.getElementById(
+        'statusFilter'
+    ).value = '';
+
+
+    renderVehicles(allVehicles);
+}
+
+
+// ============================================================
+// ADD VEHICLE
+// ============================================================
+
+async function addVehicle() {
+
+    const vehicleType =
+        document.getElementById(
+            'vehicleType'
+        ).value;
+
+
+    const batteryCapacity =
+        Number(
+            document.getElementById(
+                'batteryCapacity'
+            ).value
+        );
+
+
+    if (!vehicleType) {
+
+        alert(
+            'Please select a vehicle model.'
+        );
+
+        return;
+    }
+
+
+    if (
+        !batteryCapacity ||
+        batteryCapacity <= 0
+    ) {
+
+        alert(
+            'Please enter a valid battery capacity.'
+        );
+
+        return;
+    }
+
+
+    /*
+        IMPORTANT
+
+        Your serializer currently supports:
+
+        vehicle_type
+        battery_capacity
+        current_charge
+        latitude
+        longitude
+        speed
+        status
+
+        Therefore we send only supported
+        fields to prevent DRF 400 errors.
+
+        Registration number, color,
+        year and mileage can be added
+        after those fields are added
+        to models.py + serializer.
+    */
+
+
+    const formData = {
+
+        vehicle_type:
+            vehicleType,
+
+        battery_capacity:
+            batteryCapacity,
+
+        current_charge:
+            batteryCapacity,
+
+        status:
+            'idle',
+
+        speed:
+            0
+
+    };
+
+
+    const button =
+        document.getElementById(
+            'addVehicleButton'
+        );
+
+
+    const originalHTML =
+        button.innerHTML;
+
+
+    button.disabled = true;
+
+    button.innerHTML = `
+
+        <span class="spinner-border
+                     spinner-border-sm">
+        </span>
+
+        Adding...
+
+    `;
+
+
+    try {
+
+        const response =
+            await fetch(
+                '/api/vehicles/',
+                {
+
+                    method: 'POST',
+
+                    headers: {
+
+                        'Content-Type':
+                            'application/json',
+
+                        'X-CSRFToken':
+                            getCookie(
+                                'csrftoken'
+                            )
+
+                    },
+
+                    body:
+                        JSON.stringify(
+                            formData
+                        )
+
+                }
+            );
+
+
+        if (!response.ok) {
+
+            const errorData =
+                await response.json()
+                    .catch(() => ({}));
+
+
+            console.error(
+                'Add vehicle error:',
+                errorData
+            );
+
+
+            throw new Error(
+                'Unable to add vehicle.'
+            );
+        }
+
+
+        const modalElement =
+            document.getElementById(
+                'addVehicleModal'
+            );
+
+
+        const modal =
+            bootstrap.Modal
+                .getInstance(
+                    modalElement
+                );
+
+
+        if (modal) {
+            modal.hide();
+        }
+
+
+        document.getElementById(
+            'addVehicleForm'
+        ).reset();
+
+
+        await loadVehicles();
+
+
+        alert(
+            'Vehicle added successfully.'
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+        alert(
+            'Unable to add vehicle. Check your Django API and serializer.'
+        );
+
+    }
+
+    finally {
+
+        button.disabled = false;
+
+        button.innerHTML =
+            originalHTML;
+
+    }
+}
+
+
+// ============================================================
+// VEHICLE DETAILS
+// ============================================================
+
+async function loadVehicleDetails(
+    vehicleId
+) {
+
+    const content =
+        document.getElementById(
+            'vehicleDetailsContent'
+        );
+
+
+    content.innerHTML = `
+
+        <div class="text-center py-5">
+
+            <div class="spinner-border
+                        text-primary">
+            </div>
+
+            <p class="mt-3 text-muted">
+
+                Running EV analysis...
+
+            </p>
+
+        </div>
+    `;
+
+
+    try {
+
+        const response =
+            await fetch(
+                `/api/vehicles/${vehicleId}/`
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                'Vehicle not found'
+            );
+        }
+
+
+        const vehicle =
+            await response.json();
+
+
+        const battery =
+            getBatteryPercentage(vehicle);
+
+
+        const range =
+            estimatedRange(vehicle);
+
+
+        const health =
+            calculateHealth(vehicle);
+
+
+        content.innerHTML = `
+
+            <div class="row g-4">
+
+
+                <!-- Vehicle Overview -->
+
+                <div class="col-lg-6">
+
+                    <div class="detail-box">
+
+                        <h5 class="text-primary">
+
+                            <i class="fas fa-car"></i>
+
+                            Vehicle Information
+
+                        </h5>
+
+                        <hr>
+
+                        <p>
+
+                            <strong>
+                                Vehicle:
+                            </strong>
+
+                            ${escapeHTML(
+                                vehicle.vehicle_type
+                            )}
+
+                        </p>
+
+                        <p>
+
+                            <strong>
+                                Status:
+                            </strong>
+
+                            ${statusBadge(
+                                vehicle.status
+                            )}
+
+                        </p>
+
+                        <p>
+
+                            <strong>
+                                Battery Capacity:
+                            </strong>
+
+                            ${Number(
+                                vehicle.battery_capacity || 0
+                            ).toFixed(1)}
+                            kWh
+
+                        </p>
+
+                        <p>
+
+                            <strong>
+                                Current Charge:
+                            </strong>
+
+                            ${Number(
+                                vehicle.current_charge || 0
+                            ).toFixed(1)}
+                            kWh
+
+                        </p>
+
+                        <p>
+
+                            <strong>
+                                Speed:
+                            </strong>
+
+                            ${Number(
+                                vehicle.speed || 0
+                            ).toFixed(0)}
+                            km/h
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <!-- AI Analytics -->
+
+                <div class="col-lg-6">
+
+                    <div class="detail-box">
+
+                        <h5 class="text-success">
+
+                            <i class="fas fa-brain"></i>
+
+                            AI Vehicle Analysis
+
+                        </h5>
+
+                        <hr>
+
+
+                        <p>
+
+                            <strong>
+                                Battery:
+                            </strong>
+
+                            ${battery.toFixed(0)}%
+
+                        </p>
+
+
+                        <p>
+
+                            <strong>
+                                Estimated Range:
+                            </strong>
+
+                            ${range} km
+
+                        </p>
+
+
+                        <p>
+
+                            <strong>
+                                Vehicle Health:
+                            </strong>
+
+                            ${health}%
+
+                        </p>
+
+
+                        <p>
+
+                            <strong>
+                                Battery Condition:
+                            </strong>
+
+                            ${
+                                battery > 70
+                                ? 'Excellent'
+                                : battery > 40
+                                ? 'Good'
+                                : battery > 20
+                                ? 'Moderate'
+                                : 'Charging Required'
+                            }
+
+                        </p>
+
+
+                        <p>
+
+                            <strong>
+                                AI Recommendation:
+                            </strong>
+
+                            ${
+                                battery <= 20
+
+                                ? 'Find a charging station before continuing your journey.'
+
+                                : vehicle.status ===
+                                  'maintenance'
+
+                                ? 'Schedule vehicle maintenance.'
+
+                                : 'Vehicle operating normally.'
+                            }
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Location -->
+
+                <div class="col-lg-6">
+
+                    <div class="detail-box">
+
+                        <h5>
+
+                            <i class="fas fa-location-dot
+                                      text-danger">
+                            </i>
+
+                            Live Location
+
+                        </h5>
+
+                        <hr>
+
+                        <p>
+
+                            <strong>
+                                Latitude:
+                            </strong>
+
+                            ${Number(
+                                vehicle.latitude || 0
+                            ).toFixed(6)}
+
+                        </p>
+
+                        <p>
+
+                            <strong>
+                                Longitude:
+                            </strong>
+
+                            ${Number(
+                                vehicle.longitude || 0
+                            ).toFixed(6)}
+
+                        </p>
+
+
+                        <button
+                            class="btn
+                                   btn-outline-success"
+
+                            onclick="
+                                trackVehicle(
+                                    ${vehicle.id}
+                                )
+                            ">
+
+                            <i class="fas fa-map"></i>
+
+                            Track Vehicle
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Charging -->
+
+                <div class="col-lg-6">
+
+                    <div class="detail-box">
+
+                        <h5>
+
+                            <i class="fas fa-bolt
+                                      text-warning">
+                            </i>
+
+                            Charging Intelligence
+
+                        </h5>
+
+                        <hr>
+
+                        <p>
+
+                            <strong>
+                                Charge Required:
+                            </strong>
+
+                            ${(
+                                Number(
+                                    vehicle.battery_capacity || 0
+                                )
+                                -
+                                Number(
+                                    vehicle.current_charge || 0
+                                )
+                            ).toFixed(1)}
+                            kWh
+
+                        </p>
+
+
+                        <p>
+
+                            <strong>
+                                Estimated Range:
+                            </strong>
+
+                            ${range} km
+
+                        </p>
+
+
+                        <button
+                            class="btn btn-warning"
+
+                            onclick="
+                                findCharger(
+                                    ${vehicle.id}
+                                )
+                            ">
+
+                            <i class="fas
+                                      fa-charging-station">
+                            </i>
+
+                            Find Charging Station
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Last update -->
+
+                <div class="col-12">
+
+                    <div class="alert alert-light
+                                border">
+
+                        <i class="fas fa-clock"></i>
+
+                        <strong>
+                            Last Updated:
+                        </strong>
+
+                        ${
+                            vehicle.last_updated
+                            ? new Date(
+                                vehicle.last_updated
+                              ).toLocaleString(
+                                  'en-IN'
+                              )
+                            : 'Not available'
+                        }
+
+                    </div>
+
+                </div>
+
+
+                <!-- Actions -->
+
+                <div class="col-12">
+
+                    <div class="d-flex
+                                flex-wrap gap-2">
+
+                        <button
+                            class="btn btn-primary"
+
+                            onclick="
+                                changeVehicleStatus(
+                                    ${vehicle.id},
+                                    'driving'
+                                )
+                            ">
+
+                            <i class="fas fa-road"></i>
+
+                            Start Trip
+
+                        </button>
+
+
+                        <button
+                            class="btn btn-warning"
+
+                            onclick="
+                                changeVehicleStatus(
+                                    ${vehicle.id},
+                                    'charging'
+                                )
+                            ">
+
+                            <i class="fas fa-bolt"></i>
+
+                            Set Charging
+
+                        </button>
+
+
+                        <button
+                            class="btn btn-secondary"
+
+                            onclick="
+                                changeVehicleStatus(
+                                    ${vehicle.id},
+                                    'idle'
+                                )
+                            ">
+
+                            <i class="fas fa-pause"></i>
+
+                            Set Idle
+
+                        </button>
+
+
+                        <button
+                            class="btn btn-danger"
+
+                            onclick="
+                                changeVehicleStatus(
+                                    ${vehicle.id},
+                                    'maintenance'
+                                )
+                            ">
+
+                            <i class="fas fa-wrench"></i>
+
+                            Maintenance
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+        `;
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+
+        content.innerHTML = `
+
+            <div class="alert alert-danger">
+
+                <i class="fas
+                          fa-triangle-exclamation">
+                </i>
+
+                Unable to load vehicle details.
+
+            </div>
+
+        `;
+
+    }
+}
+
+
+// ============================================================
+// CHANGE VEHICLE STATUS
+// ============================================================
+
+async function changeVehicleStatus(
+    vehicleId,
+    status
+) {
+
+    try {
+
+        const response =
+            await fetch(
+                `/api/vehicles/${vehicleId}/`,
+                {
+
+                    method: 'PATCH',
+
+                    headers: {
+
+                        'Content-Type':
+                            'application/json',
+
+                        'X-CSRFToken':
+                            getCookie(
+                                'csrftoken'
+                            )
+
+                    },
+
+                    body:
+                        JSON.stringify({
+                            status: status
+                        })
+
+                }
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                'Update failed'
+            );
+        }
+
+
+        await loadVehicles();
+
+        await loadVehicleDetails(
+            vehicleId
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+        alert(
+            'Unable to update vehicle status.'
+        );
+
+    }
+}
+
+
+// ============================================================
+// DELETE VEHICLE
+// ============================================================
+
+async function deleteVehicle(vehicleId) {
+
+    const confirmed =
+        confirm(
+            'Are you sure you want to delete this vehicle?'
+        );
+
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                `/api/vehicles/${vehicleId}/`,
+                {
+
+                    method: 'DELETE',
+
+                    headers: {
+
+                        'X-CSRFToken':
+                            getCookie(
+                                'csrftoken'
+                            )
+
+                    }
+
+                }
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                'Delete failed'
+            );
+        }
+
+
+        await loadVehicles();
+
+
+        alert(
+            'Vehicle deleted successfully.'
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+        alert(
+            'Unable to delete vehicle.'
+        );
+
+    }
+}
+
+
+// ============================================================
+// LIVE TRACK VEHICLE
+// ============================================================
+
+function trackVehicle(vehicleId) {
+
+    const vehicle =
+        allVehicles.find(
+            item =>
+                Number(item.id) ===
+                Number(vehicleId)
+        );
+
+
+    if (!vehicle) {
+
+        alert(
+            'Vehicle location is unavailable.'
+        );
+
+        return;
+    }
+
+
+    const latitude =
+        Number(vehicle.latitude);
+
+
+    const longitude =
+        Number(vehicle.longitude);
+
+
+    if (
+        !Number.isFinite(latitude) ||
+        !Number.isFinite(longitude) ||
+        (latitude === 0 &&
+         longitude === 0)
+    ) {
+
+        alert(
+            'Live GPS location has not been updated for this vehicle.'
+        );
+
+        return;
+    }
+
+
+    const mapURL =
+        `https://www.google.com/maps?q=${latitude},${longitude}`;
+
+
+    window.open(
+        mapURL,
+        '_blank',
+        'noopener'
+    );
+}
+
+
+// ============================================================
+// FIND CHARGING STATION
+// ============================================================
+
+function findCharger(vehicleId) {
+
+    window.location.href =
+        `/charging-finder/?vehicle=${vehicleId}`;
+
+}
+
+
+// ============================================================
+// INITIAL LOAD
+// ============================================================
+
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
+
+        loadVehicles();
+
+    }
+);
+
+</script>
+
+{% endblock %}

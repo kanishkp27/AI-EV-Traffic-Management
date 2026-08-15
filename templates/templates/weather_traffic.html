@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}
+Weather & Traffic - EV Manager India
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-4 py-4">
+
+    <div class="mb-4">
+        <h2>
+            <i class="fas fa-cloud-sun text-primary me-2"></i>
+            Weather & Traffic
+        </h2>
+
+        <p class="text-muted">
+            Monitor current weather and traffic conditions for your EV journey.
+        </p>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- Weather -->
+        <div class="col-md-6">
+
+            <div class="card shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <h5 class="card-title">
+                        <i class="fas fa-cloud-sun me-2 text-primary"></i>
+                        Current Weather
+                    </h5>
+
+                    <hr>
+
+                    <div class="text-center py-4">
+
+                        <i class="fas fa-temperature-high fa-3x text-warning mb-3"></i>
+
+                        <h2>-- °C</h2>
+
+                        <p class="text-muted">
+                            Weather information will appear here.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Traffic -->
+        <div class="col-md-6">
+
+            <div class="card shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <h5 class="card-title">
+                        <i class="fas fa-road me-2 text-danger"></i>
+                        Traffic Status
+                    </h5>
+
+                    <hr>
+
+                    <div class="text-center py-4">
+
+                        <i class="fas fa-car fa-3x text-primary mb-3"></i>
+
+                        <h3>Traffic Data</h3>
+
+                        <p class="text-muted">
+                            Current traffic information will appear here.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

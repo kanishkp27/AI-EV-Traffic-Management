@@ -1,0 +1,582 @@
+<ul class="nav nav-tabs mb-4" role="tablist">
+
+    <li class="nav-item">
+        <button class="nav-link active"
+                data-bs-toggle="tab"
+                data-bs-target="#usersTab">
+            <i class="fas fa-users"></i> Users
+        </button>
+    </li>
+
+    <li class="nav-item">
+        <button class="nav-link"
+                data-bs-toggle="tab"
+                data-bs-target="#stationsTab">
+            <i class="fas fa-charging-station"></i> Stations
+        </button>
+    </li>
+
+    <li class="nav-item">
+        <button class="nav-link"
+                data-bs-toggle="tab"
+                data-bs-target="#fleetTab">
+            <i class="fas fa-car"></i> Fleet
+        </button>
+    </li>
+
+    <li class="nav-item">
+        <button class="nav-link"
+                data-bs-toggle="tab"
+                data-bs-target="#batteryTab">
+            <i class="fas fa-battery-half"></i> Battery AI
+        </button>
+    </li>
+
+    <li class="nav-item">
+        <button class="nav-link"
+                data-bs-toggle="tab"
+                data-bs-target="#maintenanceTab">
+            <i class="fas fa-tools"></i> Maintenance
+        </button>
+    </li>
+
+    <li class="nav-item">
+        <button class="nav-link"
+                data-bs-toggle="tab"
+                data-bs-target="#bookingTab">
+            <i class="fas fa-calendar-check"></i> Bookings
+        </button>
+    </li>
+
+    <li class="nav-item">
+        <button class="nav-link"
+                data-bs-toggle="tab"
+                data-bs-target="#paymentsTab">
+            <i class="fas fa-indian-rupee-sign"></i> Payments
+        </button>
+    </li>
+
+    <li class="nav-item">
+        <button class="nav-link"
+                data-bs-toggle="tab"
+                data-bs-target="#alertsTab">
+            <i class="fas fa-bell"></i> Alerts
+        </button>
+    </li>
+
+    <li class="nav-item">
+        <button class="nav-link"
+                data-bs-toggle="tab"
+                data-bs-target="#analyticsTab">
+            <i class="fas fa-chart-line"></i> Analytics
+        </button>
+    </li>
+
+    <li class="nav-item">
+        <button class="nav-link"
+                data-bs-toggle="tab"
+                data-bs-target="#settingsTab">
+            <i class="fas fa-cog"></i> Settings
+        </button>
+    </li>
+
+</ul>
+<div id="fleetTab" class="tab-pane fade">
+
+    <div class="row g-3">
+
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-label">Total Vehicles</div>
+                <div class="stat-value" id="admin-total-vehicles">-</div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-label">Driving</div>
+                <div class="stat-value text-success"
+                     id="admin-driving">
+                    -
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-label">Charging</div>
+                <div class="stat-value text-warning"
+                     id="admin-charging">
+                    -
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-label">Maintenance</div>
+                <div class="stat-value text-danger"
+                     id="admin-maintenance">
+                    -
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="card mt-4">
+
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-satellite"></i>
+                Live Fleet Monitoring
+            </h5>
+        </div>
+
+        <div class="card-body">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover">
+
+                    <thead>
+                        <tr>
+                            <th>Vehicle</th>
+                            <th>Battery</th>
+                            <th>Speed</th>
+                            <th>Status</th>
+                            <th>Location</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="fleet-table">
+                        <tr>
+                            <td colspan="5"
+                                class="text-center">
+                                Loading vehicles...
+                            </td>
+                        </tr>
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+<div id="batteryTab" class="tab-pane fade">
+
+    <div class="row">
+
+        <div class="col-lg-8">
+
+            <div class="card">
+
+                <div class="card-header">
+                    <h5>
+                        <i class="fas fa-brain"></i>
+                        AI Battery Intelligence
+                    </h5>
+                </div>
+
+                <div class="card-body">
+
+                    <table class="table">
+
+                        <thead>
+                            <tr>
+                                <th>Vehicle</th>
+                                <th>Battery</th>
+                                <th>Health</th>
+                                <th>Predicted Range</th>
+                                <th>Temperature</th>
+                                <th>AI Status</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="battery-ai-table">
+
+                            <tr>
+                                <td colspan="6"
+                                    class="text-center text-muted">
+                                    Loading battery analytics...
+                                </td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-lg-4">
+
+            <div class="card">
+
+                <div class="card-header">
+                    Battery AI Summary
+                </div>
+
+                <div class="card-body">
+
+                    <h6>Average Battery Health</h6>
+                    <h2 id="average-health">-</h2>
+
+                    <hr>
+
+                    <h6>Critical Batteries</h6>
+                    <h2 class="text-danger"
+                        id="critical-batteries">
+                        -
+                    </h2>
+
+                    <hr>
+
+                    <h6>Average Predicted Range</h6>
+                    <h2 id="average-range">-</h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+<div id="maintenanceTab" class="tab-pane fade">
+
+    <div class="card">
+
+        <div class="card-header">
+
+            <h5>
+                <i class="fas fa-tools"></i>
+                AI Predictive Maintenance
+            </h5>
+
+        </div>
+
+        <div class="card-body">
+
+            <table class="table table-hover">
+
+                <thead>
+                    <tr>
+                        <th>Vehicle</th>
+                        <th>Health</th>
+                        <th>Tires</th>
+                        <th>Brakes</th>
+                        <th>Next Service</th>
+                        <th>AI Risk</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody id="maintenance-table">
+
+                    <tr>
+                        <td colspan="7"
+                            class="text-center">
+                            Loading maintenance data...
+                        </td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+<div id="bookingTab" class="tab-pane fade">
+
+    <div class="card">
+
+        <div class="card-header">
+
+            <h5>
+                <i class="fas fa-calendar-check"></i>
+                Charging Reservations
+            </h5>
+
+        </div>
+
+        <div class="card-body">
+
+            <table class="table">
+
+                <thead>
+                    <tr>
+                        <th>Booking</th>
+                        <th>Vehicle</th>
+                        <th>Station</th>
+                        <th>Time</th>
+                        <th>Duration</th>
+                        <th>Cost</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody id="booking-table">
+
+                    <tr>
+                        <td colspan="7"
+                            class="text-center">
+                            Loading bookings...
+                        </td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+<div id="paymentsTab" class="tab-pane fade">
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-label">
+                    Total Revenue
+                </div>
+                <div class="stat-value"
+                     id="total-revenue">
+                    ₹0
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-label">
+                    Successful Payments
+                </div>
+                <div class="stat-value text-success"
+                     id="successful-payments">
+                    -
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-label">
+                    Failed Payments
+                </div>
+                <div class="stat-value text-danger"
+                     id="failed-payments">
+                    -
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="card">
+
+        <div class="card-header">
+            Transaction History
+        </div>
+
+        <div class="card-body">
+
+            <table class="table">
+
+                <thead>
+                    <tr>
+                        <th>Transaction ID</th>
+                        <th>User</th>
+                        <th>Amount</th>
+                        <th>Method</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+
+                <tbody id="payment-table"></tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+<div id="alertsTab" class="tab-pane fade">
+
+    <div class="card border-danger">
+
+        <div class="card-header">
+
+            <h5 class="text-danger">
+
+                <i class="fas fa-triangle-exclamation"></i>
+                Emergency & Alert Center
+
+            </h5>
+
+        </div>
+
+        <div class="card-body">
+
+            <div id="alert-container">
+
+                <div class="text-center text-muted">
+                    Loading active alerts...
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+async function loadAdminFleet() {
+
+    try {
+
+        const response =
+            await fetch('/api/vehicles/?limit=100');
+
+        const data =
+            await response.json();
+
+        const vehicles =
+            data.results || data;
+
+
+        document.getElementById(
+            'admin-total-vehicles'
+        ).textContent = vehicles.length;
+
+
+        const driving =
+            vehicles.filter(
+                v => v.status === 'driving'
+            ).length;
+
+
+        const charging =
+            vehicles.filter(
+                v => v.status === 'charging'
+            ).length;
+
+
+        const maintenance =
+            vehicles.filter(
+                v => v.status === 'maintenance'
+            ).length;
+
+
+        document.getElementById(
+            'admin-driving'
+        ).textContent = driving;
+
+
+        document.getElementById(
+            'admin-charging'
+        ).textContent = charging;
+
+
+        document.getElementById(
+            'admin-maintenance'
+        ).textContent = maintenance;
+
+
+        const table =
+            document.getElementById(
+                'fleet-table'
+            );
+
+
+        table.innerHTML = '';
+
+
+        vehicles.forEach(vehicle => {
+
+            let batteryClass = 'success';
+
+            if (vehicle.battery_percentage < 20)
+                batteryClass = 'danger';
+
+            else if (vehicle.battery_percentage < 40)
+                batteryClass = 'warning';
+
+
+            table.innerHTML += `
+
+                <tr>
+
+                    <td>
+                        <strong>
+                            ${vehicle.vehicle_type}
+                        </strong>
+                    </td>
+
+                    <td>
+
+                        <span class="badge bg-${batteryClass}">
+                            ${vehicle.battery_percentage}%
+                        </span>
+
+                    </td>
+
+                    <td>
+                        ${vehicle.speed || 0} km/h
+                    </td>
+
+                    <td>
+                        ${vehicle.status}
+                    </td>
+
+                    <td>
+                        ${Number(vehicle.latitude).toFixed(4)},
+                        ${Number(vehicle.longitude).toFixed(4)}
+                    </td>
+
+                </tr>
+            `;
+
+        });
+
+    }
+
+    catch (error) {
+
+        console.error(
+            'Fleet loading error:',
+            error
+        );
+
+    }
+
+}
+document.addEventListener(
+    'DOMContentLoaded',
+    () => {
+
+        loadAdminFleet();
+
+        setInterval(
+            loadAdminFleet,
+            15000
+        );
+
+    }
+);

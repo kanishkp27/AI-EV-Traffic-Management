@@ -1,0 +1,541 @@
+{% extends 'base.html' %}
+
+{% block title %}Rewards & Leaderboard - EV Manager India{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div style="background: linear-gradient(135deg, rgba(255,107,53,0.08), rgba(0,70,135,0.08)); padding: 2rem; border-radius: 1rem;">
+                <h1 class="h2" style="color: var(--primary); font-weight: 700; margin-bottom: 0.5rem;">
+                    <i class="fas fa-trophy"></i> Eco Rewards & Leaderboard
+                </h1>
+                <p class="text-muted mb-0">Earn points for eco-friendly driving and compete on global leaderboards</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Stats -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <div class="stat-label">Your Level</div>
+                        <div class="stat-value" id="userLevel" style="color: var(--primary);">--</div>
+                    </div>
+                    <i class="fas fa-level-up-alt" style="font-size: 1.75rem; color: var(--primary); opacity: 0.2;"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card" style="border-left-color: var(--success);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <div class="stat-label">Eco Points</div>
+                        <div class="stat-value" id="ecoPoints" style="color: var(--success);">--</div>
+                    </div>
+                    <i class="fas fa-star" style="font-size: 1.75rem; color: var(--success); opacity: 0.2;"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card" style="border-left-color: var(--warning);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <div class="stat-label">Eco Score</div>
+                        <div class="stat-value" id="ecoScore" style="color: var(--warning);">--</div>
+                    </div>
+                    <i class="fas fa-chart-line" style="font-size: 1.75rem; color: var(--warning); opacity: 0.2;"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card" style="border-left-color: var(--danger);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <div class="stat-label">Global Rank</div>
+                        <div class="stat-value" id="globalRank" style="color: var(--danger);">--</div>
+                    </div>
+                    <i class="fas fa-globe" style="font-size: 1.75rem; color: var(--danger); opacity: 0.2;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress to Next Level -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, var(--success) 100%); color: white;">
+                    <h5 class="mb-0" id="levelProgressTitle">Progress to Next Level</h5>
+                </div>
+                <div class="card-body">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                        <span><strong id="levelProgressText">Loading points...</strong></span>
+                        <span class="text-muted" id="pointsRemaining">-- points remaining</span>
+                    </div>
+                    <div class="progress" style="height: 12px; border-radius: 10px;">
+                        <div class="progress-bar" id="levelProgressBar" style="width: 0%; background: linear-gradient(90deg, var(--primary), var(--success));"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Eco Intelligence Dashboard -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <small class="text-muted">Green Distance</small>
+                    <h4 class="mb-1" id="greenMiles">-- km</h4>
+                    <small class="text-success"><i class="fas fa-leaf"></i> Eco-friendly travel</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <small class="text-muted">CO₂ Avoided</small>
+                    <h4 class="mb-1" id="co2Avoided">-- kg</h4>
+                    <small class="text-success"><i class="fas fa-seedling"></i> Environmental impact</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <small class="text-muted">Efficient Routes</small>
+                    <h4 class="mb-1" id="efficientRoutes">--</h4>
+                    <small class="text-primary"><i class="fas fa-route"></i> AI optimized trips</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <small class="text-muted">Off-Peak Charges</small>
+                    <h4 class="mb-1" id="offPeakCharges">--</h4>
+                    <small class="text-info"><i class="fas fa-bolt"></i> Grid-friendly charging</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Challenges & Smart Controls -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-lg-4 col-md-6">
+                    <label class="form-label">Search badges or rewards</label>
+                    <input class="form-control" id="rewardSearch" placeholder="Eco, charging, safety...">
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Badge Category</label>
+                    <select class="form-select" id="badgeCategory">
+                        <option value="">All Categories</option>
+                        <option value="eco_driver">Eco Driver</option>
+                        <option value="charging">Charging</option>
+                        <option value="distance">Distance</option>
+                        <option value="community">Community</option>
+                        <option value="safety">Safety</option>
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <label class="form-label">Leaderboard</label>
+                    <select class="form-select" id="leaderboardPeriod">
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="all_time">All Time</option>
+                    </select>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <button class="btn btn-primary w-100" onclick="refreshRewardsDashboard()">
+                        <i class="fas fa-rotate"></i> Refresh Rewards
+                    </button>
+                </div>
+            </div>
+            <div class="mt-3">
+                <small class="text-muted" id="rewardStatus">Loading eco rewards...</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header"><strong><i class="fas fa-bullseye"></i> Weekly Eco Challenges</strong></div>
+                <div class="card-body" id="challengesContainer">
+                    <div class="text-muted">Calculating your challenges...</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header"><strong><i class="fas fa-lightbulb"></i> AI Eco Coach</strong></div>
+                <div class="card-body" id="ecoCoach">
+                    <p class="text-muted mb-0">Analyzing your driving and charging habits...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs for Badges and Leaderboard -->
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#badgesTab">Badges</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#leaderboardTab">Leaderboard</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#rewardsTab">Rewards</button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- Badges Tab -->
+        <div id="badgesTab" class="tab-pane fade show active">
+            <div class="row" id="badges-container">
+                <!-- Badges will be populated here -->
+            </div>
+        </div>
+
+        <!-- Leaderboard Tab -->
+        <div id="leaderboardTab" class="tab-pane fade">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <ul class="nav nav-pills mb-3" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active" onclick="loadLeaderboard('weekly')">Weekly</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" onclick="loadLeaderboard('monthly')">Monthly</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" onclick="loadLeaderboard('all_time')">All Time</button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Driver</th>
+                                <th>Eco Score</th>
+                                <th>Green Miles</th>
+                                <th>CO2 Saved (kg)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-list">
+                            <!-- Leaderboard entries will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rewards Tab -->
+        <div id="rewardsTab" class="tab-pane fade">
+            <div class="row" id="rewards-container">
+                <!-- Rewards will be populated here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let ecoData = null;
+let badgeData = [];
+let rewardData = [];
+let currentLeaderboard = 'weekly';
+
+const fallbackBadges = [
+    {name:'Eco Champion', category:'eco_driver', icon:'fa-leaf', description:'Maintain a 90% eco-driving score', requirement_value:90, reward_points:150},
+    {name:'Green Miles', category:'distance', icon:'fa-road', description:'Complete 1000 km of eco-friendly driving', requirement_value:1000, reward_points:200},
+    {name:'Charging Expert', category:'charging', icon:'fa-bolt', description:'Complete 50 efficient charging sessions', requirement_value:50, reward_points:120},
+    {name:'Safety Hero', category:'safety', icon:'fa-shield-alt', description:'Maintain smooth and safe driving habits', requirement_value:80, reward_points:180},
+    {name:'Night Owl', category:'charging', icon:'fa-moon', description:'Complete 10 off-peak charging sessions', requirement_value:10, reward_points:100},
+    {name:'Community Hero', category:'community', icon:'fa-users', description:'Contribute to the EV community', requirement_value:5, reward_points:100}
+];
+
+const fallbackRewards = [
+    {id:1, name:'Free Charging', points:500, description:'Redeem charging credit at a partner station', icon:'fa-charging-station'},
+    {id:2, name:'Charging Voucher', points:300, description:'Get a discount on your next charging session', icon:'fa-ticket'},
+    {id:3, name:'Premium Membership', points:1000, description:'Unlock premium EV management features', icon:'fa-crown'},
+    {id:4, name:'EV Accessories', points:800, description:'Redeem selected EV accessories', icon:'fa-gift'}
+];
+
+function apiResults(data) {
+    return Array.isArray(data) ? data : (data && data.results ? data.results : []);
+}
+
+function safeNumber(value, fallback=0) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+}
+
+function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = String(value ?? '');
+    return div.innerHTML;
+}
+
+async function fetchFirst(urls) {
+    for (const url of urls) {
+        try {
+            const response = await fetch(url, {headers:{Accept:'application/json'}});
+            if (response.ok) return await response.json();
+        } catch {}
+    }
+    return null;
+}
+
+async function loadEcoScore() {
+    const data = await fetchFirst(['/api/eco-scores/me/', '/api/eco-score/me/', '/api/eco-scores/']);
+    if (data) {
+        const results = apiResults(data);
+        ecoData = results.length ? results[0] : data;
+    } else {
+        ecoData = {
+            total_points:2450, eco_driving_score:87, green_miles:3560, co2_avoided:534,
+            efficient_routes_used:18, off_peak_charging_sessions:7, smooth_acceleration_trips:24,
+            level:5, weekly_rank:127, monthly_rank:145, all_time_rank:210
+        };
+    }
+    updateEcoStats();
+}
+
+function updateEcoStats() {
+    const e = ecoData || {};
+    const points = safeNumber(e.total_points);
+    const level = Math.max(1, safeNumber(e.level, 1));
+    const nextTarget = Math.max((level + 1) * 500, Math.ceil((points + 1) / 500) * 500);
+    const levelFloor = Math.max(0, nextTarget - 500);
+    const pct = Math.max(0, Math.min(100, ((points - levelFloor) / Math.max(1, nextTarget - levelFloor)) * 100));
+
+    document.getElementById('userLevel').textContent = level;
+    document.getElementById('ecoPoints').textContent = points.toLocaleString();
+    document.getElementById('ecoScore').textContent = `${safeNumber(e.eco_driving_score).toFixed(0)}%`;
+    document.getElementById('globalRank').textContent = `#${safeNumber(e.weekly_rank || e.all_time_rank, 0) || '--'}`;
+    document.getElementById('greenMiles').textContent = `${safeNumber(e.green_miles).toLocaleString()} km`;
+    document.getElementById('co2Avoided').textContent = `${safeNumber(e.co2_avoided).toLocaleString()} kg`;
+    document.getElementById('efficientRoutes').textContent = safeNumber(e.efficient_routes_used);
+    document.getElementById('offPeakCharges').textContent = safeNumber(e.off_peak_charging_sessions);
+
+    document.getElementById('levelProgressTitle').textContent = `Progress to Level ${level + 1}`;
+    document.getElementById('levelProgressText').textContent = `${points.toLocaleString()} / ${nextTarget.toLocaleString()} Points`;
+    document.getElementById('pointsRemaining').textContent = `${Math.max(0, nextTarget - points).toLocaleString()} points remaining`;
+    document.getElementById('levelProgressBar').style.width = `${pct}%`;
+
+    renderChallenges();
+    renderEcoCoach();
+}
+
+async function loadBadges() {
+    const data = await fetchFirst(['/api/badges/', '/api/rewards/badges/']);
+    badgeData = data ? apiResults(data) : fallbackBadges;
+    if (!badgeData.length) badgeData = fallbackBadges;
+    renderBadges();
+}
+
+function badgeProgress(badge) {
+    const e = ecoData || {};
+    const category = badge.category || '';
+    const requirement = safeNumber(badge.requirement_value, 1);
+    let value = 0;
+
+    if (category === 'distance') value = safeNumber(e.green_miles);
+    else if (category === 'charging') value = safeNumber(e.off_peak_charging_sessions);
+    else if (category === 'eco_driver') value = safeNumber(e.eco_driving_score);
+    else if (category === 'safety') value = safeNumber(e.smooth_acceleration_trips);
+    else value = safeNumber(e.total_points);
+
+    return {value, requirement, percent:Math.min(100, (value / Math.max(1, requirement)) * 100), earned:value >= requirement};
+}
+
+function renderBadges() {
+    const search = document.getElementById('rewardSearch').value.trim().toLowerCase();
+    const category = document.getElementById('badgeCategory').value;
+    const container = document.getElementById('badges-container');
+
+    const badges = badgeData.filter(b => {
+        const text = `${b.name} ${b.description} ${b.category}`.toLowerCase();
+        return (!search || text.includes(search)) && (!category || b.category === category);
+    });
+
+    container.innerHTML = badges.map(b => {
+        const p = badgeProgress(b);
+        const icon = b.icon && String(b.icon).startsWith('fa-') ? b.icon : 'fa-award';
+        return `<div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+            <div class="card h-100 shadow-sm" style="opacity:${p.earned ? 1 : .82};border:2px solid ${p.earned ? 'var(--success)' : '#e5e7eb'}">
+                <div class="card-body text-center">
+                    <div class="mb-3 ${p.earned ? 'text-success' : 'text-secondary'}" style="font-size:3rem"><i class="fas ${escapeHtml(icon)}"></i></div>
+                    <h5>${escapeHtml(b.name)}</h5>
+                    <p class="text-muted small">${escapeHtml(b.description)}</p>
+                    <div class="progress mb-2" style="height:7px"><div class="progress-bar ${p.earned ? 'bg-success' : ''}" style="width:${p.percent}%"></div></div>
+                    <small>${Math.min(p.value,p.requirement).toLocaleString()} / ${p.requirement.toLocaleString()}</small><br>
+                    <span class="badge mt-2 ${p.earned ? 'bg-success' : 'bg-secondary'}">${p.earned ? 'Earned' : 'In Progress'}</span>
+                    ${b.reward_points ? `<div class="small text-warning mt-2"><i class="fas fa-star"></i> +${safeNumber(b.reward_points)} points</div>` : ''}
+                </div>
+            </div>
+        </div>`;
+    }).join('') || '<div class="col-12"><div class="alert alert-light border">No badges match your search.</div></div>';
+}
+
+async function loadLeaderboard(period='weekly') {
+    currentLeaderboard = period;
+    document.getElementById('leaderboardPeriod').value = period;
+
+    const data = await fetchFirst([
+        `/api/eco-scores/leaderboard/?period=${period}`,
+        `/api/leaderboard/?period=${period}`,
+        '/api/eco-scores/'
+    ]);
+
+    let leaders = data ? apiResults(data) : [];
+    if (!leaders.length) {
+        leaders = [
+            {rank:1, user_name:'Raj Kumar', eco_driving_score:95, green_miles:5420, co2_avoided:812, total_points:5200},
+            {rank:2, user_name:'Priya Singh', eco_driving_score:92, green_miles:4890, co2_avoided:734, total_points:4850},
+            {rank:3, user_name:'You', eco_driving_score:safeNumber(ecoData?.eco_driving_score,87), green_miles:safeNumber(ecoData?.green_miles,3560), co2_avoided:safeNumber(ecoData?.co2_avoided,534), total_points:safeNumber(ecoData?.total_points,2450), highlight:true},
+            {rank:4, user_name:'Amit Patel', eco_driving_score:85, green_miles:3120, co2_avoided:468, total_points:2300},
+            {rank:5, user_name:'Neha Gupta', eco_driving_score:82, green_miles:2890, co2_avoided:433, total_points:2100}
+        ];
+    }
+
+    leaders.sort((a,b) => safeNumber(b.total_points || b.eco_driving_score) - safeNumber(a.total_points || a.eco_driving_score));
+
+    const tbody = document.getElementById('leaderboard-list');
+    tbody.innerHTML = leaders.slice(0,50).map((leader,index) => {
+        const rank = leader.rank || index + 1;
+        const name = leader.user_name || leader.username || leader.name || leader.user?.username || `Driver ${rank}`;
+        const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+        return `<tr class="${leader.highlight || name === 'You' ? 'table-warning' : ''}">
+            <td><strong>${medal}</strong></td>
+            <td>${escapeHtml(name)}</td>
+            <td><strong>${safeNumber(leader.eco_driving_score || leader.ecoScore).toFixed(0)}%</strong></td>
+            <td>${safeNumber(leader.green_miles || leader.greenMiles).toLocaleString()} km</td>
+            <td>${safeNumber(leader.co2_avoided || leader.co2Saved).toLocaleString()} kg</td>
+        </tr>`;
+    }).join('');
+}
+
+async function loadRewards() {
+    const data = await fetchFirst(['/api/rewards/catalog/', '/api/rewards/']);
+    rewardData = data ? apiResults(data) : fallbackRewards;
+    if (!rewardData.length) rewardData = fallbackRewards;
+    renderRewards();
+}
+
+function renderRewards() {
+    const search = document.getElementById('rewardSearch').value.trim().toLowerCase();
+    const points = safeNumber(ecoData?.total_points);
+    const container = document.getElementById('rewards-container');
+
+    const list = rewardData.filter(r => !search || `${r.name} ${r.description}`.toLowerCase().includes(search));
+    container.innerHTML = list.map(r => {
+        const cost = safeNumber(r.points || r.points_required);
+        const canRedeem = points >= cost;
+        return `<div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header text-white" style="background:linear-gradient(90deg,var(--primary),var(--secondary))">
+                    <h5 class="mb-0"><i class="fas ${escapeHtml(r.icon || 'fa-gift')}"></i> ${escapeHtml(r.name)}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3"><strong class="fs-4 text-primary">${cost.toLocaleString()}</strong> <span class="text-muted">points</span></div>
+                    <p class="text-muted">${escapeHtml(r.description)}</p>
+                    <small class="${canRedeem ? 'text-success' : 'text-danger'}">${canRedeem ? 'Available to redeem' : `${Math.max(0,cost-points).toLocaleString()} more points needed`}</small>
+                </div>
+                <div class="card-footer bg-light">
+                    <button class="btn btn-sm w-100 ${canRedeem ? 'btn-primary' : 'btn-secondary'}" ${canRedeem ? `onclick="redeemReward(${Number(r.id || 0)}, '${escapeHtml(r.name).replaceAll("'","&#39;")}', ${cost})"` : 'disabled'}>
+                        <i class="fas fa-gift"></i> ${canRedeem ? 'Redeem Reward' : 'Locked'}
+                    </button>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function redeemReward(id, name, cost) {
+    if (!confirm(`Redeem "${name}" for ${cost} points?`)) return;
+    try {
+        const response = await fetch(`/api/rewards/${id}/redeem/`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json','X-CSRFToken':getCsrfToken()},
+            body:JSON.stringify({})
+        });
+        if (!response.ok) throw new Error();
+        alert('Reward redeemed successfully!');
+        await refreshRewardsDashboard();
+    } catch {
+        alert('Redeem endpoint is not available yet. Connect /api/rewards/<id>/redeem/ in Django.');
+    }
+}
+
+function getCsrfToken() {
+    const match = document.cookie.split(';').map(v => v.trim()).find(v => v.startsWith('csrftoken='));
+    return match ? decodeURIComponent(match.split('=').slice(1).join('=')) : '';
+}
+
+function renderChallenges() {
+    const e = ecoData || {};
+    const challenges = [
+        {name:'Drive Green', current:safeNumber(e.green_miles) % 500, target:500, unit:'km', icon:'fa-road'},
+        {name:'Charge Off-Peak', current:safeNumber(e.off_peak_charging_sessions) % 10, target:10, unit:'sessions', icon:'fa-moon'},
+        {name:'Use Smart Routes', current:safeNumber(e.efficient_routes_used) % 20, target:20, unit:'routes', icon:'fa-route'}
+    ];
+
+    document.getElementById('challengesContainer').innerHTML = challenges.map(c => {
+        const pct = Math.min(100,(c.current/c.target)*100);
+        return `<div class="mb-3">
+            <div class="d-flex justify-content-between"><span><i class="fas ${c.icon} text-success me-2"></i><strong>${c.name}</strong></span><small>${c.current}/${c.target} ${c.unit}</small></div>
+            <div class="progress mt-2" style="height:8px"><div class="progress-bar bg-success" style="width:${pct}%"></div></div>
+        </div>`;
+    }).join('');
+}
+
+function renderEcoCoach() {
+    const score = safeNumber(ecoData?.eco_driving_score);
+    const offPeak = safeNumber(ecoData?.off_peak_charging_sessions);
+    const routes = safeNumber(ecoData?.efficient_routes_used);
+    let tips = [];
+    if (score < 90) tips.push('Use smoother acceleration and regenerative braking to raise your Eco Score.');
+    if (offPeak < 10) tips.push('Shift more charging sessions to off-peak hours to earn extra eco points.');
+    if (routes < 20) tips.push('Use AI Smart Route Planner more often to reduce energy consumption.');
+    if (!tips.length) tips.push('Excellent eco-driving performance. Keep maintaining your current habits.');
+
+    document.getElementById('ecoCoach').innerHTML = tips.map(t => `<div class="alert alert-success py-2 small"><i class="fas fa-leaf me-2"></i>${escapeHtml(t)}</div>`).join('');
+}
+
+async function refreshRewardsDashboard() {
+    const status = document.getElementById('rewardStatus');
+    status.textContent = 'Refreshing rewards and leaderboard...';
+    await loadEcoScore();
+    await Promise.all([loadBadges(), loadRewards(), loadLeaderboard(document.getElementById('leaderboardPeriod').value)]);
+    status.textContent = `Rewards updated · ${new Date().toLocaleTimeString()}`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('rewardSearch').addEventListener('input', () => { renderBadges(); renderRewards(); });
+    document.getElementById('badgeCategory').addEventListener('change', renderBadges);
+    document.getElementById('leaderboardPeriod').addEventListener('change', e => loadLeaderboard(e.target.value));
+
+    document.querySelectorAll('#leaderboardTab .nav-pills .nav-link').forEach((button,index) => {
+        button.addEventListener('click', () => {
+            document.querySelectorAll('#leaderboardTab .nav-pills .nav-link').forEach(b => b.classList.remove('active'));
+            button.classList.add('active');
+        });
+    });
+
+    refreshRewardsDashboard();
+    setInterval(refreshRewardsDashboard, 60000);
+});
+</script>
+{% endblock %}

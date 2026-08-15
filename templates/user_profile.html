@@ -1,0 +1,452 @@
+{% extends 'base.html' %}
+
+{% block title %}User Profile & Payment - EV Manager India{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div style="background: linear-gradient(135deg, rgba(255,107,53,0.08), rgba(0,70,135,0.08)); padding: 2rem; border-radius: 1rem;">
+                <h1 class="h2" style="color: var(--primary); font-weight: 700; margin-bottom: 0.5rem;">
+                    <i class="fas fa-user-circle"></i> User Profile & Wallet
+                </h1>
+                <p class="text-muted mb-0">Manage your account, vehicles, and payments</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- User Profile Card -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 50%; margin: 0 auto 1.5rem; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-user" style="font-size: 2.5rem; color: white;"></i>
+                    </div>
+                    <h5 id="user-name">Rajesh Kumar</h5>
+                    <p class="text-muted mb-3">EV Fleet Manager</p>
+                    <small class="text-muted d-block mb-3">Member since 2023</small>
+                    
+                    <div class="mb-3">
+                        <span class="badge" style="background: var(--success); margin-right: 0.5rem;">Premium Member</span>
+                        <span class="badge" style="background: var(--primary);">Verified</span>
+                    </div>
+                    
+                    <button class="btn w-100" style="background: linear-gradient(135deg, var(--primary), #e85a1f); color: white; font-weight: 600; margin-bottom: 0.5rem;">
+                        <i class="fas fa-edit"></i> Edit Profile
+                    </button>
+                    <button class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-cog"></i> Settings
+                    </button>
+                </div>
+            </div>
+
+            <!-- Wallet Card -->
+            <div class="card mt-4">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, var(--success) 100%); color: white;">
+                    <h5 class="mb-0"><i class="fas fa-wallet"></i> Wallet Balance</h5>
+                </div>
+                <div class="card-body">
+                    <div style="background: linear-gradient(135deg, rgba(255,107,53,0.1), rgba(0,70,135,0.1)); padding: 1.5rem; border-radius: 0.75rem; text-align: center; margin-bottom: 1rem;">
+                        <small class="text-muted fw-600">Available Balance</small>
+                        <h2 id="wallet-balance" style="color: var(--primary); margin: 0.5rem 0;">₹8,750</h2>
+                        <small class="text-muted">Last updated: Just now</small>
+                    </div>
+                    
+                    <button class="btn w-100 mb-2" onclick="addMoney()" style="background: linear-gradient(135deg, var(--primary), #e85a1f); color: white; font-weight: 600;">
+                        <i class="fas fa-plus"></i> Add Money
+                    </button>
+                    <button class="btn btn-outline-secondary w-100" onclick="document.getElementById('payment-methods').scrollIntoView({behavior:'smooth'})">
+                        <i class="fas fa-credit-card"></i> Payment Methods
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics & Metrics -->
+        <div class="col-lg-8">
+            <!-- Activity Stats -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div>
+                                <small class="text-muted fw-600">Total Trips</small>
+                                <div class="stat-value" style="color: var(--primary);">234</div>
+                            </div>
+                            <i class="fas fa-road" style="font-size: 1.75rem; color: var(--primary); opacity: 0.2;"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card" style="border-left-color: var(--success);">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div>
+                                <small class="text-muted fw-600">Distance Traveled</small>
+                                <div class="stat-value" style="color: var(--success);">12,450 km</div>
+                            </div>
+                            <i class="fas fa-tachometer-alt" style="font-size: 1.75rem; color: var(--success); opacity: 0.2;"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card" style="border-left-color: #8b5cf6;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div>
+                                <small class="text-muted fw-600">CO2 Saved</small>
+                                <div class="stat-value" style="color: #8b5cf6;">3,420 kg</div>
+                            </div>
+                            <i class="fas fa-leaf" style="font-size: 1.75rem; color: #8b5cf6; opacity: 0.2;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Saved Vehicles -->
+            <div class="card mb-4">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, var(--success) 100%); color: white;">
+                    <h5 class="mb-0"><i class="fas fa-car"></i> My Vehicles</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3" id="saved-vehicles">
+                        <!-- Vehicles will be populated here -->
+                        <div class="col-md-6">
+                            <div style="border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1rem;">
+                                <h6 style="color: var(--primary); margin-bottom: 0.5rem;">Tata Nexon EV</h6>
+                                <small class="text-muted d-block mb-0.5">Registration: DL-01-AB-2024</small>
+                                <small class="text-muted d-block">Battery: 75 kWh | Range: 485 km</small>
+                                <div style="margin-top: 0.75rem;">
+                                    <span class="badge" style="background: var(--success); margin-right: 0.25rem;">Active</span>
+                                    <span class="badge" style="background: var(--primary);">Primary</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Favorite Charging Stations -->
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, var(--success) 100%); color: white;">
+                    <h5 class="mb-0"><i class="fas fa-star"></i> Favorite Charging Stations</h5>
+                </div>
+                <div class="card-body">
+                    <div id="favorite-stations">
+                        <div class="alert alert-info border-0">
+                            <i class="fas fa-info-circle"></i> You have not added any favorite charging stations yet.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Advanced Account, Wallet & EV Features -->
+    <div class="row g-4 mt-1">
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary), var(--secondary), var(--success)); color:white;">
+                    <h5 class="mb-0"><i class="fas fa-shield-halved"></i> Account Security</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3"><span>Two-Factor Authentication</span><span class="badge bg-success">Enabled</span></div>
+                    <div class="d-flex justify-content-between mb-3"><span>Email Verification</span><span class="badge bg-success">Verified</span></div>
+                    <div class="d-flex justify-content-between mb-3"><span>Mobile Verification</span><span class="badge bg-warning text-dark">Pending</span></div>
+                    <button class="btn btn-outline-primary w-100 mb-2" onclick="showFeature('Password & Security')"><i class="fas fa-key"></i> Change Password</button>
+                    <button class="btn btn-outline-secondary w-100" onclick="showFeature('Login Activity')"><i class="fas fa-clock-rotate-left"></i> Login Activity</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary), var(--secondary), var(--success)); color:white;">
+                    <h5 class="mb-0"><i class="fas fa-bolt"></i> EV Rewards</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <h2 class="mb-0" id="reward-points">2,480</h2>
+                        <small class="text-muted">Green Points</small>
+                    </div>
+                    <div class="progress mb-2" style="height:10px;"><div class="progress-bar" style="width:72%"></div></div>
+                    <small class="text-muted">520 points to Platinum EV Driver</small>
+                    <hr>
+                    <div class="d-flex justify-content-between"><span><i class="fas fa-medal text-warning"></i> Eco Driver Level</span><strong>Gold</strong></div>
+                    <button class="btn btn-outline-success w-100 mt-3" onclick="showFeature('Rewards')"><i class="fas fa-gift"></i> Redeem Rewards</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary), var(--secondary), var(--success)); color:white;">
+                    <h5 class="mb-0"><i class="fas fa-chart-line"></i> Monthly EV Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2"><span>Charging Spend</span><strong>₹1,450</strong></div>
+                    <div class="d-flex justify-content-between mb-2"><span>Energy Consumed</span><strong>121 kWh</strong></div>
+                    <div class="d-flex justify-content-between mb-2"><span>Distance</span><strong>1,286 km</strong></div>
+                    <div class="d-flex justify-content-between mb-2"><span>Charging Sessions</span><strong>8</strong></div>
+                    <div class="d-flex justify-content-between"><span>CO₂ Saved</span><strong class="text-success">154 kg</strong></div>
+                    <button class="btn btn-outline-primary w-100 mt-3" onclick="downloadStatement()"><i class="fas fa-file-arrow-down"></i> Download Statement</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-1">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary), var(--secondary), var(--success)); color:white;">
+                    <h5 class="mb-0"><i class="fas fa-credit-card"></i> Saved Payment Methods</h5>
+                </div>
+                <div class="card-body" id="payment-methods">
+                    <div class="p-3 border rounded mb-2 d-flex justify-content-between align-items-center">
+                        <div><i class="fas fa-mobile-screen-button me-2"></i><strong>UPI</strong><br><small class="text-muted">Primary payment method</small></div>
+                        <span class="badge bg-success">Primary</span>
+                    </div>
+                    <div class="p-3 border rounded d-flex justify-content-between align-items-center">
+                        <div><i class="fas fa-credit-card me-2"></i><strong>Debit / Credit Card</strong><br><small class="text-muted">Secure tokenized payment</small></div>
+                        <button class="btn btn-sm btn-outline-primary" onclick="showFeature('Add Card')">Add</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary), var(--secondary), var(--success)); color:white;">
+                    <h5 class="mb-0"><i class="fas fa-sliders"></i> Smart Preferences</h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" id="low-battery-alert" checked><label class="form-check-label" for="low-battery-alert">Low battery alerts</label></div>
+                    <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" id="booking-reminder" checked><label class="form-check-label" for="booking-reminder">Charging booking reminders</label></div>
+                    <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" id="traffic-alert" checked><label class="form-check-label" for="traffic-alert">Traffic & route alerts</label></div>
+                    <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" id="weather-alert"><label class="form-check-label" for="weather-alert">Weather battery-impact alerts</label></div>
+                    <button class="btn btn-primary w-100" onclick="savePreferences()"><i class="fas fa-floppy-disk"></i> Save Preferences</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment History & Transactions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, var(--success) 100%); color: white;">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Recent Transactions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead style="background-color: rgba(255,107,53,0.05);">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Station / Description</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transaction-history">
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-3">Loading transactions...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trip History -->
+    <div class="row mt-4 mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, var(--success) 100%); color: white;">
+                    <h5 class="mb-0"><i class="fas fa-map-location-dot"></i> Trip History</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead style="background-color: rgba(255,107,53,0.05);">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Route</th>
+                                    <th>Distance</th>
+                                    <th>Duration</th>
+                                    <th>Energy Used</th>
+                                    <th>Cost</th>
+                                </tr>
+                            </thead>
+                            <tbody id="trip-history">
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-3">Loading trip history...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function csrfToken() {
+    const input = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (input?.value) return input.value;
+    const cookie = document.cookie.split(';').map(v => v.trim()).find(v => v.startsWith('csrftoken='));
+    return cookie ? decodeURIComponent(cookie.substring(10)) : '';
+}
+function escapeHtml(v) {
+    const d=document.createElement('div'); d.textContent=String(v ?? ''); return d.innerHTML;
+}
+function money(v) {
+    return new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(Number(v||0));
+}
+function showFeature(name) {
+    alert(name + ' feature is ready for backend integration.');
+}
+async function apiGet(url) {
+    const r=await fetch(url,{headers:{'Accept':'application/json'}});
+    if(!r.ok) throw new Error(`${url}: ${r.status}`);
+    return r.json();
+}
+
+async function loadUserProfile() {
+    let transactions = [
+        {date:'2026-08-04',type:'Charging',station:'Delhi EV Hub - Sector 52',amount:450,status:'Completed'},
+        {date:'2026-08-02',type:'Wallet Topup',station:'UPI Payment',amount:2000,status:'Completed'},
+        {date:'2026-07-30',type:'Charging',station:'Noida Super Charger',amount:620,status:'Completed'},
+        {date:'2026-07-28',type:'Charging',station:'Aligarh EV Charging Hub',amount:380,status:'Completed'},
+        {date:'2026-07-25',type:'Wallet Topup',station:'Online Payment',amount:5000,status:'Completed'}
+    ];
+    let trips = [
+        {date:'2026-08-04',route:'Aligarh → Delhi',distance:'145 km',duration:'2h 45m',energy:'23.2 kWh',cost:'₹348'},
+        {date:'2026-08-01',route:'Delhi → Agra',distance:'235 km',duration:'3h 50m',energy:'35.3 kWh',cost:'₹520'},
+        {date:'2026-07-29',route:'Noida → Jaipur',distance:'280 km',duration:'4h 15m',energy:'42.0 kWh',cost:'₹620'},
+        {date:'2026-07-26',route:'Lucknow → Delhi',distance:'500 km',duration:'7h 30m',energy:'75.0 kWh',cost:'₹900'}
+    ];
+
+    // Try real Django REST endpoints first; sample data remains as graceful fallback.
+    try {
+        const payments = await apiGet('/api/payments/');
+        const rows = Array.isArray(payments) ? payments : (payments.results || []);
+        if(rows.length) transactions = rows.map(p => ({
+            date:(p.created_at||'').slice(0,10),
+            type:p.payment_method ? `Payment · ${p.payment_method.toUpperCase()}` : 'Payment',
+            station:p.transaction_id || 'EV Manager',
+            amount:Number(p.amount||0),
+            status:p.status || 'pending'
+        }));
+    } catch(e) { console.info('Payments fallback active'); }
+
+    try {
+        const tripData = await apiGet('/api/trips/');
+        const rows = Array.isArray(tripData) ? tripData : (tripData.results || []);
+        if(rows.length) trips = rows.slice(0,10).map(t => ({
+            date:(t.start_time||'').slice(0,10),
+            route:t.route_detail?.name || `Trip #${t.id}`,
+            distance:`${Number(t.distance_traveled||0).toFixed(1)} km`,
+            duration:t.end_time ? 'Completed' : 'In progress',
+            energy:`${Number(t.energy_used||0).toFixed(1)} kWh`,
+            cost:'—'
+        }));
+    } catch(e) { console.info('Trips fallback active'); }
+
+    renderTransactions(transactions);
+    renderTrips(trips);
+    loadVehicles();
+    loadFavorites();
+}
+
+function renderTransactions(rows) {
+    document.getElementById('transaction-history').innerHTML = rows.map(t => `
+        <tr>
+            <td>${escapeHtml(t.date)}</td>
+            <td><span class="badge ${String(t.type).toLowerCase().includes('charging')?'bg-primary':'bg-success'}">${escapeHtml(t.type)}</span></td>
+            <td>${escapeHtml(t.station)}</td>
+            <td><strong>${typeof t.amount==='number'?money(t.amount):escapeHtml(t.amount)}</strong></td>
+            <td><span class="badge ${String(t.status).toLowerCase()==='completed'?'bg-success':'bg-warning text-dark'}">${escapeHtml(t.status)}</span></td>
+        </tr>`).join('');
+}
+
+function renderTrips(rows) {
+    document.getElementById('trip-history').innerHTML = rows.map(t => `
+        <tr><td>${escapeHtml(t.date)}</td><td>${escapeHtml(t.route)}</td><td>${escapeHtml(t.distance)}</td>
+        <td>${escapeHtml(t.duration)}</td><td>${escapeHtml(t.energy)}</td><td><strong>${escapeHtml(t.cost)}</strong></td></tr>`).join('');
+}
+
+async function loadVehicles() {
+    try {
+        const data=await apiGet('/api/vehicles/');
+        const rows=Array.isArray(data)?data:(data.results||[]);
+        if(!rows.length) return;
+        document.getElementById('saved-vehicles').innerHTML=rows.map((v,i)=>`
+            <div class="col-md-6"><div class="border rounded p-3 h-100">
+                <div class="d-flex justify-content-between"><h6 class="text-primary">${escapeHtml(v.vehicle_type)}</h6><i class="fas fa-car-side text-muted"></i></div>
+                <small class="text-muted d-block">Battery: ${Number(v.battery_capacity||0)} kWh</small>
+                <small class="text-muted d-block">Current charge: ${Number(v.battery_percentage||v.current_charge||0).toFixed(0)}%</small>
+                <div class="mt-2"><span class="badge bg-success">${escapeHtml(v.status||'Active')}</span>${i===0?' <span class="badge bg-primary">Primary</span>':''}</div>
+            </div></div>`).join('');
+    } catch(e) { console.info('Vehicle fallback active'); }
+}
+
+async function loadFavorites() {
+    try {
+        const data=await apiGet('/api/stations/');
+        const rows=(Array.isArray(data)?data:(data.results||[])).slice(0,3);
+        if(!rows.length) return;
+        document.getElementById('favorite-stations').innerHTML=rows.map(s=>`
+            <div class="border rounded p-3 mb-2 d-flex justify-content-between align-items-center">
+                <div><strong>${escapeHtml(s.name)}</strong><br><small class="text-muted">${Number(s.chargers_available||0)}/${Number(s.chargers_total||0)} chargers available · ${Number(s.power_capacity||0)} kW</small></div>
+                <a class="btn btn-sm btn-outline-primary" href="/charging-finder/?station=${Number(s.id||0)}"><i class="fas fa-location-dot"></i></a>
+            </div>`).join('');
+    } catch(e) { console.info('Stations fallback active'); }
+}
+
+function addMoney() {
+    const raw=prompt('Enter amount to add to EV Wallet (₹):','1000');
+    if(raw===null) return;
+    const amount=Number(raw);
+    if(!Number.isFinite(amount)||amount<=0) return alert('Enter a valid amount.');
+    alert(`₹${amount.toLocaleString('en-IN')} top-up selected. Connect this action to your payment gateway/API.`);
+}
+
+function savePreferences() {
+    const prefs={
+        lowBattery:document.getElementById('low-battery-alert').checked,
+        bookingReminder:document.getElementById('booking-reminder').checked,
+        trafficAlert:document.getElementById('traffic-alert').checked,
+        weatherAlert:document.getElementById('weather-alert').checked
+    };
+    localStorage.setItem('ev-manager-preferences',JSON.stringify(prefs));
+    alert('Smart notification preferences saved.');
+}
+
+function restorePreferences() {
+    try {
+        const p=JSON.parse(localStorage.getItem('ev-manager-preferences')||'null');
+        if(!p) return;
+        document.getElementById('low-battery-alert').checked=!!p.lowBattery;
+        document.getElementById('booking-reminder').checked=!!p.bookingReminder;
+        document.getElementById('traffic-alert').checked=!!p.trafficAlert;
+        document.getElementById('weather-alert').checked=!!p.weatherAlert;
+    } catch(e) {}
+}
+
+function downloadStatement() {
+    const rows=[['EV Manager India - Monthly Statement'],['Generated',new Date().toLocaleString('en-IN')],
+        ['Charging Spend','₹1,450'],['Energy Consumed','121 kWh'],['Distance','1,286 km'],['Charging Sessions','8'],['CO2 Saved','154 kg']];
+    const csv=rows.map(r=>r.map(x=>`"${String(x).replaceAll('"','""')}"`).join(',')).join('\n');
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='ev-monthly-statement.csv'; a.click(); URL.revokeObjectURL(a.href);
+}
+
+document.addEventListener('DOMContentLoaded',()=>{restorePreferences();loadUserProfile();});
+</script>
+{% endblock %}

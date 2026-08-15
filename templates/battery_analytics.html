@@ -1,0 +1,632 @@
+{% extends 'base.html' %}
+
+{% block title %}Battery Analytics & Fleet Dashboard - EV Manager India{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div style="background: linear-gradient(135deg, rgba(255,107,53,0.08), rgba(0,70,135,0.08)); padding: 2rem; border-radius: 1rem;">
+                <h1 class="h2" style="color: var(--primary); font-weight: 700; margin-bottom: 0.5rem;">
+                    <i class="fas fa-chart-pie"></i> Battery Analytics & Fleet Dashboard
+                </h1>
+                <p class="text-muted mb-0">Real-time battery health monitoring and fleet performance analytics</p>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Advanced Battery Intelligence Controls -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Search Vehicle</label>
+                            <input id="vehicle-search" class="form-control" placeholder="ID or vehicle model">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Status</label>
+                            <select id="status-filter" class="form-select">
+                                <option value="">All vehicles</option>
+                                <option value="driving">Driving</option>
+                                <option value="charging">Charging</option>
+                                <option value="idle">Idle</option>
+                                <option value="maintenance">Maintenance</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Battery Level</label>
+                            <select id="battery-filter" class="form-select">
+                                <option value="">All levels</option>
+                                <option value="critical">Critical ≤ 20%</option>
+                                <option value="low">Low 21–40%</option>
+                                <option value="good">Good 41–80%</option>
+                                <option value="high">High > 80%</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-grid">
+                            <button class="btn btn-primary" onclick="applyVehicleFilters()">
+                                <i class="fas fa-filter me-1"></i> Filter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-body d-flex flex-column justify-content-center">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>Live Monitoring</strong>
+                        <span id="live-status" class="badge bg-success">ON</span>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-sm btn-outline-primary" onclick="fetchVehicleData()">
+                            <i class="fas fa-rotate"></i> Refresh
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="toggleAutoRefresh()">
+                            <i class="fas fa-clock"></i> Auto Refresh
+                        </button>
+                        <button class="btn btn-sm btn-outline-success" onclick="exportFleetCSV()">
+                            <i class="fas fa-file-csv"></i> Export CSV
+                        </button>
+                    </div>
+                    <small id="last-refresh" class="text-muted mt-2">Waiting for first refresh...</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fleet KPIs -->
+    <div class="row mb-4 g-3">
+        <div class="col-lg-2 col-md-4 col-sm-6">
+            <div class="stat-card">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <small class="text-muted fw-600">Total Vehicles</small>
+                        <div class="stat-value" id="total-vehicles">0</div>
+                    </div>
+                    <i class="fas fa-truck" style="font-size: 1.5rem; color: var(--primary); opacity: 0.2;"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6">
+            <div class="stat-card" style="border-left-color: var(--success);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <small class="text-muted fw-600">Fleet Health</small>
+                        <div class="stat-value" style="color: var(--success);" id="fleet-health">95%</div>
+                    </div>
+                    <i class="fas fa-heartbeat" style="font-size: 1.5rem; color: var(--success); opacity: 0.2;"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6">
+            <div class="stat-card" style="border-left-color: var(--warning);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <small class="text-muted fw-600">Avg Battery</small>
+                        <div class="stat-value" style="color: var(--warning);" id="avg-battery">65%</div>
+                    </div>
+                    <i class="fas fa-battery-three-quarters" style="font-size: 1.5rem; color: var(--warning); opacity: 0.2;"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6">
+            <div class="stat-card" style="border-left-color: #10b981;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <small class="text-muted fw-600">Energy Used</small>
+                        <div class="stat-value" style="color: #10b981;" id="energy-used">2,450 kWh</div>
+                    </div>
+                    <i class="fas fa-bolt" style="font-size: 1.5rem; color: #10b981; opacity: 0.2;"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6">
+            <div class="stat-card" style="border-left-color: #8b5cf6;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <small class="text-muted fw-600">CO2 Saved</small>
+                        <div class="stat-value" style="color: #8b5cf6;" id="co2-saved">892 kg</div>
+                    </div>
+                    <i class="fas fa-leaf" style="font-size: 1.5rem; color: #8b5cf6; opacity: 0.2;"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6">
+            <div class="stat-card" style="border-left-color: #f97316;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <small class="text-muted fw-600">Charging Sessions</small>
+                        <div class="stat-value" style="color: #f97316;" id="charging-sessions">342</div>
+                    </div>
+                    <i class="fas fa-plug" style="font-size: 1.5rem; color: #f97316; opacity: 0.2;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- AI / Predictive KPIs -->
+    <div class="row mb-4 g-3">
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card" style="border-left-color:#ef4444;">
+                <small class="text-muted fw-600">Critical Batteries</small>
+                <div class="stat-value text-danger" id="critical-batteries">0</div>
+                <small class="text-muted">Vehicles at or below 20%</small>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card" style="border-left-color:#0ea5e9;">
+                <small class="text-muted fw-600">Estimated Fleet Range</small>
+                <div class="stat-value" style="color:#0ea5e9;" id="fleet-range">0 km</div>
+                <small class="text-muted">Current energy-based estimate</small>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card" style="border-left-color:#8b5cf6;">
+                <small class="text-muted fw-600">Charging Vehicles</small>
+                <div class="stat-value" style="color:#8b5cf6;" id="charging-now">0</div>
+                <small class="text-muted">Currently connected</small>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card" style="border-left-color:#14b8a6;">
+                <small class="text-muted fw-600">Fleet Efficiency</small>
+                <div class="stat-value" style="color:#14b8a6;" id="fleet-efficiency">--</div>
+                <small class="text-muted">Battery availability score</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Battery Distribution Chart -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, var(--success) 100%); color: white;">
+                    <h5 class="mb-0">Battery Level Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="battery-distribution"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charging Sessions Over Time -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, var(--success) 100%); color: white;">
+                    <h5 class="mb-0">Daily Charging Sessions</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="charging-timeline"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-2">
+        <!-- Energy Consumption by Vehicle Type -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, var(--success) 100%); color: white;">
+                    <h5 class="mb-0">Energy Consumption by Vehicle</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="energy-by-vehicle"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Battery Health Trends -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, var(--success) 100%); color: white;">
+                    <h5 class="mb-0">Fleet Battery Health Trend</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="battery-health-trend"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- AI Battery Intelligence -->
+    <div class="row g-4 mt-2">
+        <div class="col-lg-7">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center"
+                     style="background:linear-gradient(90deg,var(--primary),var(--secondary),var(--success));color:white;">
+                    <h5 class="mb-0"><i class="fas fa-brain me-2"></i>AI Battery Intelligence</h5>
+                    <span class="badge bg-light text-dark">Predictive</span>
+                </div>
+                <div class="card-body">
+                    <div id="ai-insights">
+                        <div class="alert alert-info mb-2">
+                            Fleet insights will appear after vehicle data is loaded.
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded">
+                                <small class="text-muted">Charge Soon</small>
+                                <h4 id="charge-soon">0</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded">
+                                <small class="text-muted">Maintenance Risk</small>
+                                <h4 id="maintenance-risk">0</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded">
+                                <small class="text-muted">Healthy Vehicles</small>
+                                <h4 id="healthy-vehicles">0</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card h-100">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-triangle-exclamation me-2"></i>Battery Alerts</h5>
+                </div>
+                <div class="card-body" id="battery-alerts">
+                    <p class="text-muted mb-0">No alerts loaded.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charging Cost & Sustainability Estimator -->
+    <div class="row g-4 mt-2">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header"><h5 class="mb-0"><i class="fas fa-indian-rupee-sign me-2"></i>Charging Cost Estimator</h5></div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Energy Required (kWh)</label>
+                            <input id="estimate-kwh" type="number" min="0" step="0.1" class="form-control" value="30">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Price / kWh (₹)</label>
+                            <input id="estimate-rate" type="number" min="0" step="0.1" class="form-control" value="12">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary mt-3" onclick="calculateChargingCost()">Calculate</button>
+                    <div id="cost-result" class="alert alert-light mt-3 mb-0">Estimated cost: ₹360.00</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header"><h5 class="mb-0"><i class="fas fa-leaf me-2"></i>Sustainability Snapshot</h5></div>
+                <div class="card-body">
+                    <p class="mb-2">Estimated CO₂ savings and EV energy performance can be connected to your Trip and EcoScore backend data.</p>
+                    <div class="progress mb-2" style="height:12px;">
+                        <div id="sustainability-progress" class="progress-bar bg-success" style="width:75%"></div>
+                    </div>
+                    <small id="sustainability-text" class="text-muted">Fleet sustainability score: 75%</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vehicle Battery Status Table -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, var(--success) 100%); color: white;">
+                    <h5 class="mb-0">Individual Vehicle Battery Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead style="background-color: rgba(255,107,53,0.05);">
+                                <tr>
+                                    <th>Vehicle ID</th>
+                                    <th>Type</th>
+                                    <th>Battery %</th>
+                                    <th>Health</th>
+                                    <th>Range (km)</th>
+                                    <th>Status</th>
+                                    <th>Last Updated</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vehicle-table">
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-3">Loading vehicle data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Initialize charts
+let charts = {};
+
+function initCharts() {
+    // Battery Distribution Chart
+    charts.battery = new Chart(document.getElementById('battery-distribution'), {
+        type: 'doughnut',
+        data: {
+            labels: ['0-25%', '25-50%', '50-75%', '75-100%'],
+            datasets: [{
+                data: [8, 15, 35, 42],
+                backgroundColor: ['#ef4444', '#f97316', '#eab308', '#22c55e']
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+    });
+
+    // Charging Timeline Chart
+    charts.timeline = new Chart(document.getElementById('charging-timeline'), {
+        type: 'line',
+        data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+                label: 'Charging Sessions',
+                data: [45, 52, 38, 61, 55, 48, 42],
+                borderColor: 'var(--primary)',
+                backgroundColor: 'rgba(255,107,53,0.1)',
+                tension: 0.4
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: true } } }
+    });
+
+    // Energy by Vehicle Chart
+    charts.energy = new Chart(document.getElementById('energy-by-vehicle'), {
+        type: 'bar',
+        data: {
+            labels: ['Tata Nexon', 'Mahindra XUV', 'Hyundai Kona', 'MG ZS'],
+            datasets: [{
+                label: 'Energy (kWh)',
+                data: [650, 520, 380, 440],
+                backgroundColor: ['var(--primary)', 'var(--secondary)', 'var(--success)', 'var(--warning)']
+            }]
+        },
+        options: { responsive: true, indexAxis: 'y' }
+    });
+
+    // Battery Health Trend
+    charts.health = new Chart(document.getElementById('battery-health-trend'), {
+        type: 'line',
+        data: {
+            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+            datasets: [{
+                label: 'Average Battery Health %',
+                data: [98, 97.5, 97, 96.8],
+                borderColor: 'var(--success)',
+                backgroundColor: 'rgba(19,136,8,0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: true } } }
+    });
+}
+
+// Advanced fleet data
+let allVehicles = [];
+let autoRefreshEnabled = true;
+let refreshTimer = null;
+
+function batteryPercent(vehicle) {
+    if (vehicle.battery_percentage !== undefined && vehicle.battery_percentage !== null) {
+        return Number(vehicle.battery_percentage);
+    }
+    const capacity = Number(vehicle.battery_capacity || 0);
+    const charge = Number(vehicle.current_charge || 0);
+    return capacity > 0 ? (charge / capacity) * 100 : 0;
+}
+
+function estimatedRange(vehicle) {
+    return Math.max(0, Number(vehicle.current_charge || 0) * 6.5);
+}
+
+function escapeHTML(value) {
+    const el = document.createElement('div');
+    el.textContent = String(value ?? '');
+    return el.innerHTML;
+}
+
+function renderVehicleTable(vehicles) {
+    const table = document.getElementById('vehicle-table');
+    if (!vehicles.length) {
+        table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No vehicles match the selected filters.</td></tr>';
+        return;
+    }
+
+    table.innerHTML = vehicles.slice(0, 50).map(vehicle => {
+        const pct = batteryPercent(vehicle);
+        const range = estimatedRange(vehicle);
+        const color = pct > 50 ? 'var(--success)' : pct > 25 ? 'var(--warning)' : 'var(--danger)';
+        const status = escapeHTML(vehicle.status || 'idle');
+        const statusColor = status === 'driving' ? 'var(--success)' :
+                            status === 'charging' ? 'var(--warning)' :
+                            status === 'maintenance' ? 'var(--danger)' : '#9ca3af';
+
+        return `
+            <tr>
+                <td>#${escapeHTML(vehicle.id)}</td>
+                <td>${escapeHTML(vehicle.vehicle_type)}</td>
+                <td>
+                    <div class="progress" style="height:6px;background:#e5e7eb;">
+                        <div class="progress-bar" style="width:${Math.min(100, pct)}%;background:${color}"></div>
+                    </div>
+                    ${pct.toFixed(1)}%
+                </td>
+                <td><small>${pct >= 80 ? 'Excellent' : pct >= 50 ? 'Good' : pct >= 25 ? 'Attention' : 'Critical'}</small></td>
+                <td>${range.toFixed(0)} km</td>
+                <td><span class="badge" style="background:${statusColor};">${status}</span></td>
+                <td><small class="text-muted">${vehicle.last_updated ? new Date(vehicle.last_updated).toLocaleString() : 'Just now'}</small></td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" onclick="showVehicleInsight(${Number(vehicle.id)})">
+                        <i class="fas fa-magnifying-glass-chart"></i>
+                    </button>
+                </td>
+            </tr>`;
+    }).join('');
+}
+
+function updateFleetMetrics(vehicles) {
+    const count = vehicles.length;
+    const percentages = vehicles.map(batteryPercent);
+    const avg = count ? percentages.reduce((a,b) => a+b, 0) / count : 0;
+    const critical = percentages.filter(v => v <= 20).length;
+    const charging = vehicles.filter(v => v.status === 'charging').length;
+    const totalRange = vehicles.reduce((sum,v) => sum + estimatedRange(v), 0);
+    const healthy = percentages.filter(v => v >= 50).length;
+
+    document.getElementById('total-vehicles').textContent = count;
+    document.getElementById('avg-battery').textContent = `${avg.toFixed(1)}%`;
+    document.getElementById('fleet-health').textContent = `${Math.max(0, Math.min(100, avg + 25)).toFixed(0)}%`;
+    document.getElementById('critical-batteries').textContent = critical;
+    document.getElementById('charging-now').textContent = charging;
+    document.getElementById('fleet-range').textContent = `${totalRange.toFixed(0)} km`;
+    document.getElementById('fleet-efficiency').textContent = `${avg.toFixed(0)}%`;
+    document.getElementById('charge-soon').textContent = percentages.filter(v => v <= 35).length;
+    document.getElementById('maintenance-risk').textContent = vehicles.filter(v => v.status === 'maintenance').length;
+    document.getElementById('healthy-vehicles').textContent = healthy;
+
+    const sustainability = Math.max(0, Math.min(100, Math.round(avg)));
+    document.getElementById('sustainability-progress').style.width = `${sustainability}%`;
+    document.getElementById('sustainability-text').textContent = `Fleet sustainability score: ${sustainability}%`;
+
+    const alerts = vehicles.filter(v => batteryPercent(v) <= 25 || v.status === 'maintenance').slice(0, 6);
+    document.getElementById('battery-alerts').innerHTML = alerts.length ? alerts.map(v => {
+        const pct = batteryPercent(v);
+        return `<div class="alert ${pct <= 20 ? 'alert-danger' : 'alert-warning'} py-2">
+            <strong>#${escapeHTML(v.id)} ${escapeHTML(v.vehicle_type)}</strong><br>
+            <small>${pct <= 25 ? `Battery ${pct.toFixed(1)}%` : ''} ${v.status === 'maintenance' ? ' Maintenance required.' : ''}</small>
+        </div>`;
+    }).join('') : '<div class="alert alert-success mb-0">No critical battery alerts.</div>';
+
+    const insights = [];
+    if (critical) insights.push(`${critical} vehicle(s) have critical battery levels and should be prioritized for charging.`);
+    if (charging) insights.push(`${charging} vehicle(s) are currently charging.`);
+    if (vehicles.some(v => v.status === 'maintenance')) insights.push('Maintenance-status vehicles should be excluded from route allocation.');
+    if (!insights.length && count) insights.push('Fleet battery availability currently looks stable.');
+    document.getElementById('ai-insights').innerHTML = insights.map(i => `<div class="alert alert-info py-2 mb-2"><i class="fas fa-wand-magic-sparkles me-2"></i>${i}</div>`).join('');
+
+    // Live doughnut chart from API data
+    if (charts.battery && count) {
+        charts.battery.data.datasets[0].data = [
+            percentages.filter(v => v <= 25).length,
+            percentages.filter(v => v > 25 && v <= 50).length,
+            percentages.filter(v => v > 50 && v <= 75).length,
+            percentages.filter(v => v > 75).length
+        ];
+        charts.battery.update();
+    }
+}
+
+async function fetchVehicleData() {
+    const table = document.getElementById('vehicle-table');
+    try {
+        const response = await fetch('/api/vehicles/', {headers:{Accept:'application/json'}});
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        allVehicles = Array.isArray(data) ? data : (data.results || []);
+        updateFleetMetrics(allVehicles);
+        applyVehicleFilters();
+        document.getElementById('last-refresh').textContent = `Last refresh: ${new Date().toLocaleTimeString()}`;
+    } catch (error) {
+        console.error('Error fetching vehicle data:', error);
+        table.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">
+            <i class="fas fa-circle-exclamation me-2"></i>Could not load /api/vehicles/. Check that the Django server and API are running.
+        </td></tr>`;
+    }
+}
+
+function applyVehicleFilters() {
+    const query = document.getElementById('vehicle-search').value.trim().toLowerCase();
+    const status = document.getElementById('status-filter').value;
+    const level = document.getElementById('battery-filter').value;
+
+    const filtered = allVehicles.filter(v => {
+        const pct = batteryPercent(v);
+        const matchesQuery = !query ||
+            String(v.id).includes(query) ||
+            String(v.vehicle_type || '').toLowerCase().includes(query);
+        const matchesStatus = !status || v.status === status;
+        let matchesLevel = true;
+        if (level === 'critical') matchesLevel = pct <= 20;
+        if (level === 'low') matchesLevel = pct > 20 && pct <= 40;
+        if (level === 'good') matchesLevel = pct > 40 && pct <= 80;
+        if (level === 'high') matchesLevel = pct > 80;
+        return matchesQuery && matchesStatus && matchesLevel;
+    });
+    renderVehicleTable(filtered);
+}
+
+function showVehicleInsight(id) {
+    const v = allVehicles.find(x => Number(x.id) === Number(id));
+    if (!v) return;
+    const pct = batteryPercent(v);
+    alert(
+        `${v.vehicle_type} (#${v.id})\n` +
+        `Battery: ${pct.toFixed(1)}%\n` +
+        `Estimated range: ${estimatedRange(v).toFixed(0)} km\n` +
+        `Status: ${v.status}\n` +
+        `Recommendation: ${pct <= 20 ? 'Charge immediately.' : pct <= 40 ? 'Plan a charging stop.' : 'Battery level is suitable for normal operation.'}`
+    );
+}
+
+function calculateChargingCost() {
+    const kwh = Number(document.getElementById('estimate-kwh').value || 0);
+    const rate = Number(document.getElementById('estimate-rate').value || 0);
+    document.getElementById('cost-result').textContent = `Estimated cost: ₹${(kwh * rate).toFixed(2)}`;
+}
+
+function exportFleetCSV() {
+    if (!allVehicles.length) return alert('No vehicle data available to export.');
+    const rows = [['ID','Vehicle Type','Battery %','Estimated Range km','Status']];
+    allVehicles.forEach(v => rows.push([
+        v.id, v.vehicle_type, batteryPercent(v).toFixed(1), estimatedRange(v).toFixed(0), v.status
+    ]));
+    const csv = rows.map(row => row.map(value => `"${String(value ?? '').replaceAll('"','""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `ev-fleet-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+}
+
+function toggleAutoRefresh() {
+    autoRefreshEnabled = !autoRefreshEnabled;
+    document.getElementById('live-status').textContent = autoRefreshEnabled ? 'ON' : 'OFF';
+    document.getElementById('live-status').className = `badge ${autoRefreshEnabled ? 'bg-success' : 'bg-secondary'}`;
+    if (refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = autoRefreshEnabled ? setInterval(fetchVehicleData, 30000) : null;
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    initCharts();
+    fetchVehicleData();
+    refreshTimer = setInterval(fetchVehicleData, 30000);
+
+    document.getElementById('vehicle-search').addEventListener('input', applyVehicleFilters);
+    document.getElementById('status-filter').addEventListener('change', applyVehicleFilters);
+    document.getElementById('battery-filter').addEventListener('change', applyVehicleFilters);
+});
+</script>
+{% endblock %}

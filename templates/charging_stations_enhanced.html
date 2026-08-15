@@ -1,0 +1,615 @@
+{% extends 'base.html' %}
+
+{% block title %}Charging Stations - EV Manager India{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div style="background: linear-gradient(135deg, rgba(255,107,53,0.08), rgba(0,70,135,0.08)); padding: 2rem; border-radius: 1rem;">
+                <h1 class="h2" style="color: var(--primary); font-weight: 700; margin-bottom: 0.5rem;">
+                    <i class="fas fa-plug"></i> Charging Stations
+                </h1>
+                <p class="text-muted mb-0">Browse and book charging stations with real-time availability, reviews, and queue management</p>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Charging Network KPIs -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-3 col-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <small class="text-muted">Total Stations</small>
+                    <h3 class="mb-0" id="kpiTotalStations">0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <small class="text-muted">Available Chargers</small>
+                    <h3 class="mb-0 text-success" id="kpiAvailableChargers">0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <small class="text-muted">Fast Charging Stations</small>
+                    <h3 class="mb-0 text-warning" id="kpiFastStations">0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <small class="text-muted">Average Price</small>
+                    <h3 class="mb-0" id="kpiAveragePrice">₹0</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Smart Station Controls -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Minimum Power</label>
+                    <select class="form-select" id="filterPower">
+                        <option value="0">Any Power</option>
+                        <option value="50">50+ kW</option>
+                        <option value="100">100+ kW</option>
+                        <option value="150">150+ kW</option>
+                    </select>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Amenities</label>
+                    <select class="form-select" id="filterAmenity">
+                        <option value="">Any Amenity</option>
+                        <option value="restaurant">Restaurant</option>
+                        <option value="restroom">Restroom</option>
+                        <option value="wheelchair">Wheelchair Accessible</option>
+                        <option value="qr">QR Check-in</option>
+                    </select>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Sort Stations</label>
+                    <select class="form-select" id="sortStations">
+                        <option value="availability">Most Available</option>
+                        <option value="rating">Highest Rated</option>
+                        <option value="price">Lowest Price</option>
+                        <option value="power">Highest Power</option>
+                        <option value="queue">Shortest Queue</option>
+                    </select>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Quick Actions</label>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary flex-fill" onclick="loadStations()">
+                            <i class="fas fa-rotate"></i>
+                        </button>
+                        <button class="btn btn-outline-danger flex-fill" onclick="toggleFavoritesOnly()">
+                            <i class="fas fa-heart"></i>
+                        </button>
+                        <button class="btn btn-outline-success flex-fill" onclick="useCurrentLocation()">
+                            <i class="fas fa-location-crosshairs"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <small id="stationStatusText" class="text-muted">Loading charging network...</small>
+                <button class="btn btn-sm btn-outline-secondary" onclick="resetStationFilters()">
+                    <i class="fas fa-rotate-left"></i> Reset Filters
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                <input type="text" class="form-control" id="searchStations" placeholder="Search stations...">
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select class="form-control" id="filterChargerType">
+                <option value="">All Charger Types</option>
+                <option value="level1">Level 1 (120V)</option>
+                <option value="level2">Level 2 (240V)</option>
+                <option value="dcfc">DC Fast Charging</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select class="form-control" id="filterAvailability">
+                <option value="">All Availability</option>
+                <option value="available">Available</option>
+                <option value="limited">Limited (1-3)</option>
+                <option value="full">Full Capacity</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn w-100" style="background: var(--primary); color: white;" onclick="openMapView()">
+                <i class="fas fa-map"></i> Map View
+            </button>
+        </div>
+    </div>
+
+    <!-- Stations List -->
+    <div class="row" id="stations-container">
+        <!-- Station cards will be populated here -->
+    </div>
+</div>
+
+<!-- Station Details Modal -->
+<div class="modal fade" id="stationDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, var(--success) 100%); color: white;">
+                <h5 class="modal-title" id="stationName">Station Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Chargers</h6>
+                        <p class="h4" id="chargerInfo">4/4 Available</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Rating</h6>
+                        <p class="h4">
+                            <span id="stationRating">4.5</span>/5
+                            <i class="fas fa-star" style="color: #FFB800; margin-left: 0.5rem;"></i>
+                        </p>
+                    </div>
+                </div>
+
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="border rounded p-3">
+                            <small class="text-muted">Charging Power</small>
+                            <div class="h5 mb-0" id="stationPower">-- kW</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-3">
+                            <small class="text-muted">Price</small>
+                            <div class="h5 mb-0" id="stationPrice">₹--/kWh</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-3">
+                            <small class="text-muted">Status</small>
+                            <div class="h5 mb-0" id="stationOperationalStatus">--</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 flex-wrap mb-4">
+                    <button class="btn btn-outline-primary btn-sm" id="directionsBtn">
+                        <i class="fas fa-diamond-turn-right"></i> Directions
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" id="favoriteStationBtn">
+                        <i class="fas fa-heart"></i> Favorite
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" id="estimateCostBtn">
+                        <i class="fas fa-calculator"></i> Estimate Cost
+                    </button>
+                </div>
+
+                <h6 class="mb-3">Amenities & Features</h6>
+                <div class="row mb-4" id="amenities-list">
+                    <!-- Amenities will be populated here -->
+                </div>
+
+                <h6 class="mb-3">Queue Status</h6>
+                <div class="alert" id="queueStatus">
+                    <strong>Wait Time:</strong> <span id="waitTime">0</span> mins
+                </div>
+
+                <h6 class="mb-3">Recent Reviews</h6>
+                <div id="reviews-list" style="max-height: 300px; overflow-y: auto;">
+                    <!-- Reviews will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn" style="background: var(--primary); color: white;" id="bookChargingBtn">
+                    <i class="fas fa-calendar-check"></i> Book Now
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Booking Modal -->
+<div class="modal fade" id="bookingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, var(--success) 100%); color: white;">
+                <h5 class="modal-title">Book Charging Slot</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Select Vehicle</label>
+                    <select class="form-control" id="bookingVehicle">
+                        <option value="">Choose your vehicle</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Preferred Time</label>
+                    <input type="datetime-local" class="form-control" id="bookingTime">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Duration</label>
+                    <select class="form-control" id="bookingDuration">
+                        <option value="30">30 minutes</option>
+                        <option value="60">1 hour</option>
+                        <option value="120">2 hours</option>
+                        <option value="240">4 hours</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Expected Energy (kWh)</label>
+                    <input type="number" min="1" step="1" class="form-control" id="bookingEnergy" value="20">
+                </div>
+                <div class="alert alert-info">
+                    <strong>Estimated Cost:</strong> <span id="estimatedCost">₹0</span><br>
+                    <small id="bookingPriceInfo">Calculated using station price.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn" style="background: var(--primary); color: white;" onclick="confirmBooking()">Confirm Booking</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let allStations = [];
+let filteredStations = [];
+let currentStation = null;
+let favoritesOnly = false;
+
+function safeText(value) {
+    const el = document.createElement('div');
+    el.textContent = String(value ?? '');
+    return el.innerHTML;
+}
+
+function apiResults(data) {
+    return Array.isArray(data) ? data : (data.results || []);
+}
+
+function favorites() {
+    try { return JSON.parse(localStorage.getItem('ev_station_favorites') || '[]'); }
+    catch { return []; }
+}
+
+function toggleStationFavorite(id) {
+    let list = favorites();
+    const key = String(id);
+    list = list.includes(key) ? list.filter(x => x !== key) : [...list, key];
+    localStorage.setItem('ev_station_favorites', JSON.stringify(list));
+    applyFilters();
+}
+
+function stationAvailable(station) {
+    return Number(station.chargers_available || 0);
+}
+
+function stationPrice(station) {
+    const p = Number(station.price_per_kwh);
+    if (Number.isFinite(p) && p > 0) return p;
+    return station.charger_type === 'dcfc' ? 15 : station.charger_type === 'level2' ? 12 : 8.5;
+}
+
+async function loadStations() {
+    const container = document.getElementById('stations-container');
+    container.innerHTML = '<div class="col-12 text-center py-5"><div class="spinner-border text-primary"></div><p class="text-muted mt-2">Loading charging stations...</p></div>';
+    try {
+        const response = await fetch('/api/stations/', {headers:{Accept:'application/json'}});
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        allStations = apiResults(data);
+        applyFilters();
+        document.getElementById('stationStatusText').textContent =
+            `${allStations.length} charging stations loaded · ${new Date().toLocaleTimeString()}`;
+    } catch (error) {
+        console.error('Error loading stations:', error);
+        container.innerHTML = '<div class="col-12"><div class="alert alert-danger">Unable to load <code>/api/stations/</code>. Check your Django API and server.</div></div>';
+        document.getElementById('stationStatusText').textContent = 'Charging network unavailable';
+    }
+}
+
+function applyFilters() {
+    const search = document.getElementById('searchStations').value.trim().toLowerCase();
+    const type = document.getElementById('filterChargerType').value;
+    const availability = document.getElementById('filterAvailability').value;
+    const power = Number(document.getElementById('filterPower').value || 0);
+    const amenity = document.getElementById('filterAmenity').value;
+    const sort = document.getElementById('sortStations').value;
+    const favs = favorites();
+
+    filteredStations = allStations.filter(s => {
+        const available = stationAvailable(s);
+        const total = Number(s.chargers_total || 0);
+        const haystack = `${s.name || ''} ${s.operator_name || ''} ${s.amenities || ''}`.toLowerCase();
+
+        if (search && !haystack.includes(search)) return false;
+        if (type && s.charger_type !== type) return false;
+        if (Number(s.power_capacity || 0) < power) return false;
+        if (favoritesOnly && !favs.includes(String(s.id))) return false;
+
+        if (availability === 'available' && available < 1) return false;
+        if (availability === 'limited' && !(available >= 1 && available <= 3)) return false;
+        if (availability === 'full' && !(total > 0 && available >= total)) return false;
+
+        if (amenity === 'restaurant' && !s.has_restaurant && !String(s.amenities || '').toLowerCase().includes('restaurant')) return false;
+        if (amenity === 'restroom' && !s.has_restroom && !String(s.amenities || '').toLowerCase().includes('restroom')) return false;
+        if (amenity === 'wheelchair' && !s.wheelchair_accessible) return false;
+        if (amenity === 'qr' && !s.qr_code_enabled) return false;
+        return true;
+    });
+
+    filteredStations.sort((a,b) => {
+        if (sort === 'rating') return Number(b.average_rating || 0) - Number(a.average_rating || 0);
+        if (sort === 'price') return stationPrice(a) - stationPrice(b);
+        if (sort === 'power') return Number(b.power_capacity || 0) - Number(a.power_capacity || 0);
+        if (sort === 'queue') return Number(a.waitlist_size || 0) - Number(b.waitlist_size || 0);
+        return stationAvailable(b) - stationAvailable(a);
+    });
+
+    renderStations();
+    updateKPIs();
+}
+
+function renderStations() {
+    const container = document.getElementById('stations-container');
+    const favs = favorites();
+    container.innerHTML = '';
+
+    if (!filteredStations.length) {
+        container.innerHTML = '<div class="col-12"><div class="alert alert-info">No stations match the selected filters.</div></div>';
+        return;
+    }
+
+    filteredStations.forEach(station => {
+        const available = stationAvailable(station);
+        const total = Math.max(1, Number(station.chargers_total || 0));
+        const percentage = Math.min(100, (available / total) * 100);
+        const availabilityClass = available > 3 ? 'success' : available > 0 ? 'warning' : 'danger';
+        const isFavorite = favs.includes(String(station.id));
+        const status = station.operational_status || 'operational';
+
+        const card = document.createElement('div');
+        card.className = 'col-xl-4 col-lg-6 mb-4';
+        card.innerHTML = `
+            <div class="card h-100 shadow-sm">
+                <div class="card-header" style="background:linear-gradient(90deg,var(--primary),var(--secondary),var(--success));color:white;">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div>
+                            <h5 class="mb-1">${safeText(station.name)}</h5>
+                            <small>${safeText(station.operator_name || 'EV Charging Network')}</small>
+                        </div>
+                        <button class="btn btn-sm btn-light" onclick="toggleStationFavorite(${Number(station.id)})">
+                            <i class="${isFavorite ? 'fas text-danger' : 'far'} fa-heart"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Availability</span>
+                        <span class="badge bg-${availabilityClass}">${available}/${total}</span>
+                    </div>
+                    <div class="progress mb-3" style="height:8px;">
+                        <div class="progress-bar bg-${availabilityClass}" style="width:${percentage}%"></div>
+                    </div>
+
+                    <div class="row text-center g-2 mb-3">
+                        <div class="col-4"><small class="text-muted">Type</small><div><strong>${safeText(station.charger_type || '--')}</strong></div></div>
+                        <div class="col-4"><small class="text-muted">Power</small><div><strong>${Number(station.power_capacity || 0)} kW</strong></div></div>
+                        <div class="col-4"><small class="text-muted">Rating</small><div><strong>${Number(station.average_rating || 0).toFixed(1)} ⭐</strong></div></div>
+                    </div>
+
+                    <div class="alert alert-light py-2 mb-2">
+                        <strong>₹${stationPrice(station).toFixed(2)}/kWh</strong> · Queue: ${Number(station.waitlist_size || 0)}
+                    </div>
+                    <small class="${status === 'operational' ? 'text-success' : 'text-danger'}">
+                        <i class="fas fa-circle me-1"></i>${safeText(status)}
+                    </small>
+                </div>
+                <div class="card-footer bg-light d-flex flex-wrap gap-2">
+                    <button class="btn btn-sm btn-primary" onclick="showStationDetails(${Number(station.id)})"><i class="fas fa-info-circle"></i> Details</button>
+                    <button class="btn btn-sm btn-success" ${available < 1 || status !== 'operational' ? 'disabled' : ''} onclick="openBookingModal(${Number(station.id)})"><i class="fas fa-calendar-check"></i> Book</button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="openDirections(${Number(station.latitude)},${Number(station.longitude)})"><i class="fas fa-route"></i> Route</button>
+                </div>
+            </div>`;
+        container.appendChild(card);
+    });
+}
+
+function updateKPIs() {
+    document.getElementById('kpiTotalStations').textContent = filteredStations.length;
+    document.getElementById('kpiAvailableChargers').textContent =
+        filteredStations.reduce((sum,s) => sum + stationAvailable(s), 0);
+    document.getElementById('kpiFastStations').textContent =
+        filteredStations.filter(s => s.charger_type === 'dcfc' || Number(s.power_capacity || 0) >= 100).length;
+    const avg = filteredStations.length ?
+        filteredStations.reduce((sum,s) => sum + stationPrice(s), 0) / filteredStations.length : 0;
+    document.getElementById('kpiAveragePrice').textContent = `₹${avg.toFixed(2)}`;
+}
+
+async function showStationDetails(stationId) {
+    try {
+        const response = await fetch(`/api/stations/${stationId}/`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const station = await response.json();
+        currentStation = station;
+
+        document.getElementById('stationName').textContent = station.name;
+        document.getElementById('chargerInfo').textContent = `${station.chargers_available}/${station.chargers_total} Available`;
+        document.getElementById('stationRating').textContent = Number(station.average_rating || 0).toFixed(1);
+        document.getElementById('waitTime').textContent = station.waitlist_size || 0;
+        document.getElementById('stationPower').textContent = `${Number(station.power_capacity || 0)} kW`;
+        document.getElementById('stationPrice').textContent = `₹${stationPrice(station).toFixed(2)}/kWh`;
+        document.getElementById('stationOperationalStatus').textContent = station.operational_status || 'Operational';
+
+        document.getElementById('amenities-list').innerHTML = `
+            <div class="col-6 mb-2"><i class="fas ${station.wheelchair_accessible ? 'fa-check text-success' : 'fa-times text-muted'}"></i> Wheelchair Accessible</div>
+            <div class="col-6 mb-2"><i class="fas ${station.has_restaurant ? 'fa-check text-success' : 'fa-times text-muted'}"></i> Restaurant</div>
+            <div class="col-6 mb-2"><i class="fas ${station.has_restroom ? 'fa-check text-success' : 'fa-times text-muted'}"></i> Restroom</div>
+            <div class="col-6 mb-2"><i class="fas ${station.qr_code_enabled ? 'fa-check text-success' : 'fa-times text-muted'}"></i> QR Check-in</div>`;
+
+        document.getElementById('directionsBtn').onclick = () => openDirections(station.latitude, station.longitude);
+        document.getElementById('favoriteStationBtn').onclick = () => toggleStationFavorite(station.id);
+        document.getElementById('estimateCostBtn').onclick = () => estimateStationCost(station);
+        document.getElementById('bookChargingBtn').onclick = () => {
+            bootstrap.Modal.getInstance(document.getElementById('stationDetailsModal')).hide();
+            openBookingModal(station.id);
+        };
+
+        const reviews = station.reviews || [];
+        document.getElementById('reviews-list').innerHTML = reviews.length ?
+            reviews.slice(0,5).map(r => `<div class="border-bottom py-2"><strong>${safeText(r.title || 'Review')}</strong> · ${Number(r.rating || 0)}/5 ⭐<br><small>${safeText(r.comment || '')}</small></div>`).join('') :
+            '<p class="text-muted">No recent reviews available.</p>';
+
+        new bootstrap.Modal(document.getElementById('stationDetailsModal')).show();
+    } catch (error) {
+        alert('Unable to load station details.');
+    }
+}
+
+async function openBookingModal(stationId) {
+    window.currentStationId = stationId;
+    currentStation = allStations.find(s => Number(s.id) === Number(stationId)) || currentStation;
+    await loadVehiclesForBooking();
+    setMinimumBookingTime();
+    updateBookingCost();
+    new bootstrap.Modal(document.getElementById('bookingModal')).show();
+}
+
+async function loadVehiclesForBooking() {
+    const select = document.getElementById('bookingVehicle');
+    select.innerHTML = '<option value="">Choose your vehicle</option>';
+    try {
+        const response = await fetch('/api/vehicles/');
+        if (!response.ok) return;
+        const data = apiResults(await response.json());
+        data.forEach(v => {
+            select.innerHTML += `<option value="${Number(v.id)}">${safeText(v.vehicle_type)} (#${Number(v.id)})</option>`;
+        });
+    } catch {}
+}
+
+function setMinimumBookingTime() {
+    const input = document.getElementById('bookingTime');
+    const now = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
+    input.min = now.toISOString().slice(0,16);
+    if (!input.value) input.value = now.toISOString().slice(0,16);
+}
+
+function updateBookingCost() {
+    const duration = Number(document.getElementById('bookingDuration').value || 30);
+    const energy = Number(document.getElementById('bookingEnergy').value || 0);
+    const rate = currentStation ? stationPrice(currentStation) : 12;
+    document.getElementById('estimatedCost').textContent = `₹${(energy * rate).toFixed(2)}`;
+    document.getElementById('bookingPriceInfo').textContent = `${energy} kWh × ₹${rate.toFixed(2)}/kWh · ${duration} minute slot`;
+}
+
+async function confirmBooking() {
+    const vehicleId = document.getElementById('bookingVehicle').value;
+    const bookingTime = document.getElementById('bookingTime').value;
+    const duration = Number(document.getElementById('bookingDuration').value);
+
+    if (!vehicleId || !bookingTime) {
+        alert('Please select a vehicle and booking time.');
+        return;
+    }
+
+    const payload = {
+        vehicle: Number(vehicleId),
+        station: Number(window.currentStationId),
+        booking_time: new Date(bookingTime).toISOString(),
+        expected_duration: duration,
+        estimated_cost: currentStation ? Number(document.getElementById('bookingEnergy').value || 0) * stationPrice(currentStation) : 0
+    };
+
+    try {
+        const response = await fetch('/api/charging-bookings/', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            const message = await response.text();
+            throw new Error(message);
+        }
+        alert('Charging slot booked successfully!');
+        bootstrap.Modal.getInstance(document.getElementById('bookingModal')).hide();
+        loadStations();
+    } catch (error) {
+        console.error(error);
+        alert('Booking failed. Check the charging-bookings API and required serializer fields.');
+    }
+}
+
+function estimateStationCost(station) {
+    const energy = Number(prompt('How many kWh would you like to charge?', '30'));
+    if (!Number.isFinite(energy) || energy <= 0) return;
+    const rate = stationPrice(station);
+    alert(`Estimated charging cost: ₹${(energy * rate).toFixed(2)}\n${energy} kWh × ₹${rate.toFixed(2)}/kWh`);
+}
+
+function openDirections(lat, lon) {
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(lat)},${encodeURIComponent(lon)}`, '_blank', 'noopener');
+}
+
+function openMapView() {
+    window.location.href = '/charging-finder/';
+}
+
+function toggleFavoritesOnly() {
+    favoritesOnly = !favoritesOnly;
+    applyFilters();
+}
+
+function resetStationFilters() {
+    favoritesOnly = false;
+    document.getElementById('searchStations').value = '';
+    document.getElementById('filterChargerType').value = '';
+    document.getElementById('filterAvailability').value = '';
+    document.getElementById('filterPower').value = '0';
+    document.getElementById('filterAmenity').value = '';
+    document.getElementById('sortStations').value = 'availability';
+    applyFilters();
+}
+
+function useCurrentLocation() {
+    if (!navigator.geolocation) return alert('Location is not supported by this browser.');
+    navigator.geolocation.getCurrentPosition(
+        p => window.location.href = `/charging-finder/?lat=${p.coords.latitude}&lon=${p.coords.longitude}`,
+        () => alert('Unable to access your current location. Please allow location permission.')
+    );
+}
+
+['searchStations','filterChargerType','filterAvailability','filterPower','filterAmenity','sortStations']
+.forEach(id => {
+    document.getElementById(id)?.addEventListener(id === 'searchStations' ? 'input' : 'change', applyFilters);
+});
+
+document.getElementById('bookingDuration')?.addEventListener('change', updateBookingCost);
+document.getElementById('bookingEnergy')?.addEventListener('input', updateBookingCost);
+
+loadStations();
+</script>
+{% endblock %}

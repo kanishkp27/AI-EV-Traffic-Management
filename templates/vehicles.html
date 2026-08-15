@@ -1,0 +1,617 @@
+{% extends "base.html" %}
+
+{% block title %}
+My Vehicles - EV Manager India
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-4 py-3">
+
+    <!-- =====================================================
+         PAGE HEADER
+    ====================================================== -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+
+        <div>
+            <h2 class="fw-bold mb-1">
+                <i class="fas fa-car-side text-primary me-2"></i>
+                My Vehicles
+            </h2>
+
+            <p class="text-muted mb-0">
+                Manage, monitor and track your electric vehicles
+            </p>
+        </div>
+
+        <button
+            type="button"
+            class="btn btn-primary"
+            data-bs-toggle="modal"
+            data-bs-target="#addVehicleModal"
+        >
+            <i class="fas fa-plus me-2"></i>
+            Add Vehicle
+        </button>
+
+    </div>
+
+
+    <!-- =====================================================
+         SUMMARY CARDS
+    ====================================================== -->
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between align-items-center">
+
+                        <div>
+                            <p class="text-muted mb-1">
+                                Total Vehicles
+                            </p>
+
+                            <h3 class="fw-bold mb-0">
+                                {{ vehicles|length }}
+                            </h3>
+                        </div>
+
+                        <div class="fs-2 text-primary">
+                            <i class="fas fa-car"></i>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between align-items-center">
+
+                        <div>
+                            <p class="text-muted mb-1">
+                                Fleet Status
+                            </p>
+
+                            <h5 class="fw-bold text-success mb-0">
+                                Online
+                            </h5>
+                        </div>
+
+                        <div class="fs-2 text-success">
+                            <i class="fas fa-signal"></i>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between align-items-center">
+
+                        <div>
+                            <p class="text-muted mb-1">
+                                Vehicle Type
+                            </p>
+
+                            <h5 class="fw-bold mb-0">
+                                Electric
+                            </h5>
+                        </div>
+
+                        <div class="fs-2 text-warning">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between align-items-center">
+
+                        <div>
+                            <p class="text-muted mb-1">
+                                System
+                            </p>
+
+                            <h5 class="fw-bold text-success mb-0">
+                                Active
+                            </h5>
+                        </div>
+
+                        <div class="fs-2 text-info">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         VEHICLE CARDS
+    ====================================================== -->
+
+    <div class="row g-4">
+
+        {% for vehicle in vehicles %}
+
+        <div class="col-xl-4 col-lg-6 col-md-6">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <!-- CARD HEADER -->
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+
+                        <div>
+
+                            <div class="mb-2">
+                                <span class="badge bg-primary">
+                                    ELECTRIC VEHICLE
+                                </span>
+                            </div>
+
+                            <h4 class="fw-bold mb-1">
+                                {{ vehicle.vehicle_model|default:"Electric Vehicle" }}
+                            </h4>
+
+                            <small class="text-muted">
+                                Vehicle ID #{{ vehicle.id }}
+                            </small>
+
+                        </div>
+
+
+                        <div
+                            class="d-flex align-items-center justify-content-center bg-light rounded-circle"
+                            style="width:60px;height:60px;"
+                        >
+                            <i class="fas fa-car-side fa-2x text-primary"></i>
+                        </div>
+
+                    </div>
+
+
+                    <hr>
+
+
+                    <!-- STATUS -->
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+
+                        <span class="text-muted">
+                            <i class="fas fa-circle me-2 text-success"></i>
+                            Status
+                        </span>
+
+                        {% if vehicle.status %}
+
+                            {% if vehicle.status == "active" or vehicle.status == "Active" %}
+
+                            <span class="badge bg-success">
+                                {{ vehicle.status }}
+                            </span>
+
+                            {% elif vehicle.status == "charging" or vehicle.status == "Charging" %}
+
+                            <span class="badge bg-warning text-dark">
+                                <i class="fas fa-bolt me-1"></i>
+                                {{ vehicle.status }}
+                            </span>
+
+                            {% else %}
+
+                            <span class="badge bg-secondary">
+                                {{ vehicle.status }}
+                            </span>
+
+                            {% endif %}
+
+                        {% else %}
+
+                        <span class="badge bg-success">
+                            Active
+                        </span>
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <!-- BATTERY -->
+
+                    <div class="mb-4">
+
+                        <div class="d-flex justify-content-between mb-2">
+
+                            <span class="text-muted">
+                                <i class="fas fa-battery-three-quarters me-2"></i>
+                                Battery Level
+                            </span>
+
+                            <strong>
+                                {{ vehicle.battery_level|default:"0" }}%
+                            </strong>
+
+                        </div>
+
+
+                        <div
+                            class="progress"
+                            style="height:10px;"
+                        >
+
+                            <div
+                                class="progress-bar bg-success"
+                                role="progressbar"
+                                style="width: {{ vehicle.battery_level|default:'0' }}%;"
+                                aria-valuenow="{{ vehicle.battery_level|default:'0' }}"
+                                aria-valuemin="0"
+                                aria-valuemax="100"
+                            >
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- VEHICLE INFORMATION -->
+
+                    <div class="row g-3 mb-4">
+
+                        <div class="col-6">
+
+                            <div class="p-3 bg-light rounded">
+
+                                <small class="text-muted d-block">
+                                    Vehicle Model
+                                </small>
+
+                                <strong>
+                                    {{ vehicle.vehicle_model|default:"EV" }}
+                                </strong>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="col-6">
+
+                            <div class="p-3 bg-light rounded">
+
+                                <small class="text-muted d-block">
+                                    Vehicle ID
+                                </small>
+
+                                <strong>
+                                    #{{ vehicle.id }}
+                                </strong>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- ACTION BUTTONS -->
+
+                    <div class="row g-2">
+
+                        <div class="col-6">
+
+                            <button
+                                type="button"
+                                class="btn btn-primary w-100"
+                            >
+                                <i class="fas fa-eye me-2"></i>
+                                Details
+                            </button>
+
+                        </div>
+
+
+                        <div class="col-6">
+
+                            <button
+                                type="button"
+                                class="btn btn-outline-primary w-100"
+                            >
+                                <i class="fas fa-map-marker-alt me-2"></i>
+                                Track
+                            </button>
+
+                        </div>
+
+
+                        <div class="col-6">
+
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary w-100"
+                            >
+                                <i class="fas fa-edit me-2"></i>
+                                Edit
+                            </button>
+
+                        </div>
+
+
+                        <div class="col-6">
+
+                            <button
+                                type="button"
+                                class="btn btn-outline-danger w-100"
+                            >
+                                <i class="fas fa-trash me-2"></i>
+                                Delete
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        {% empty %}
+
+        <!-- =================================================
+             NO VEHICLES
+        ================================================== -->
+
+        <div class="col-12">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body text-center py-5">
+
+                    <div
+                        class="mx-auto mb-4 d-flex align-items-center justify-content-center bg-light rounded-circle"
+                        style="width:100px;height:100px;"
+                    >
+                        <i class="fas fa-car-side fa-3x text-muted"></i>
+                    </div>
+
+
+                    <h3 class="fw-bold">
+                        No Vehicles Added
+                    </h3>
+
+
+                    <p class="text-muted mb-4">
+                        Add your first electric vehicle to start monitoring
+                        battery, trips, charging and vehicle performance.
+                    </p>
+
+
+                    <button
+                        type="button"
+                        class="btn btn-primary btn-lg"
+                        data-bs-toggle="modal"
+                        data-bs-target="#addVehicleModal"
+                    >
+                        <i class="fas fa-plus me-2"></i>
+                        Add Your First Vehicle
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     ADD VEHICLE MODAL
+========================================================== -->
+
+<div
+    class="modal fade"
+    id="addVehicleModal"
+    tabindex="-1"
+    aria-hidden="true"
+>
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content border-0 shadow">
+
+            <div class="modal-header">
+
+                <div>
+
+                    <h5 class="modal-title fw-bold">
+                        <i class="fas fa-car-side text-primary me-2"></i>
+                        Add Electric Vehicle
+                    </h5>
+
+                    <small class="text-muted">
+                        Register a vehicle with EV Manager
+                    </small>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                ></button>
+
+            </div>
+
+
+            <form method="POST">
+
+                {% csrf_token %}
+
+                <div class="modal-body">
+
+
+                    <!-- VEHICLE MODEL -->
+
+                    <div class="mb-3">
+
+                        <label class="form-label fw-semibold">
+                            Vehicle Model
+                        </label>
+
+                        <input
+                            type="text"
+                            name="vehicle_model"
+                            class="form-control"
+                            placeholder="Example: Tata Nexon EV"
+                            required
+                        >
+
+                    </div>
+
+
+                    <!-- BATTERY -->
+
+                    <div class="mb-3">
+
+                        <label class="form-label fw-semibold">
+                            Battery Level
+                        </label>
+
+                        <div class="input-group">
+
+                            <input
+                                type="number"
+                                name="battery_level"
+                                class="form-control"
+                                min="0"
+                                max="100"
+                                value="100"
+                            >
+
+                            <span class="input-group-text">
+                                %
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- STATUS -->
+
+                    <div class="mb-3">
+
+                        <label class="form-label fw-semibold">
+                            Vehicle Status
+                        </label>
+
+                        <select
+                            name="status"
+                            class="form-select"
+                        >
+
+                            <option value="Active">
+                                Active
+                            </option>
+
+                            <option value="Charging">
+                                Charging
+                            </option>
+
+                            <option value="Parked">
+                                Parked
+                            </option>
+
+                            <option value="Maintenance">
+                                Maintenance
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- EV INFO -->
+
+                    <div class="alert alert-info mb-0">
+
+                        <i class="fas fa-info-circle me-2"></i>
+
+                        After adding your vehicle, you can monitor
+                        battery, charging, routes and alerts from your
+                        EV dashboard.
+
+                    </div>
+
+                </div>
+
+
+                <div class="modal-footer">
+
+                    <button
+                        type="button"
+                        class="btn btn-light"
+                        data-bs-dismiss="modal"
+                    >
+                        Cancel
+                    </button>
+
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                    >
+                        <i class="fas fa-plus me-2"></i>
+                        Add Vehicle
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

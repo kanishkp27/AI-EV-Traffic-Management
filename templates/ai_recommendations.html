@@ -1,0 +1,1549 @@
+```html
+{% extends "base.html" %}
+
+{% block title %}
+AI Recommendations - EV Manager India
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-4 py-4">
+
+    <!-- ===================================================== -->
+    <!-- PAGE HEADER -->
+    <!-- ===================================================== -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h2 class="fw-bold">
+                <i class="fas fa-brain text-primary me-2"></i>
+                AI Recommendations
+            </h2>
+
+            <p class="text-muted mb-0">
+                AI-powered EV fleet analysis, energy optimization,
+                traffic prediction and smart charging recommendations.
+            </p>
+        </div>
+
+        <button
+            class="btn btn-primary"
+            onclick="location.reload()"
+        >
+            <i class="fas fa-sync-alt me-2"></i>
+            Refresh AI
+        </button>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- AI STATUS -->
+    <!-- ===================================================== -->
+
+    <div
+        id="ai-status"
+        class="alert alert-info"
+    >
+        <i class="fas fa-spinner fa-spin me-2"></i>
+        Initializing AI analysis...
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- WEATHER + TRAFFIC -->
+    <!-- ===================================================== -->
+
+    <div class="row g-4 mt-2">
+
+        <!-- WEATHER AI -->
+
+        <div class="col-lg-6">
+
+            <div class="card h-100 shadow-sm">
+
+                <div
+                    class="card-header text-white"
+                    style="background: linear-gradient(90deg, #0d6efd, #6610f2, #198754);"
+                >
+
+                    <h5 class="mb-0">
+
+                        <i class="fas fa-cloud-sun me-2"></i>
+
+                        Weather Impact AI
+
+                    </h5>
+
+                </div>
+
+
+                <div
+                    class="card-body"
+                    id="weather-ai"
+                >
+
+                    <div class="text-center py-4 text-muted">
+
+                        <i
+                            class="fas fa-spinner fa-spin fa-2x mb-3"
+                        ></i>
+
+                        <p class="mb-0">
+                            Analyzing weather impact on EV performance...
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- TRAFFIC AI -->
+
+        <div class="col-lg-6">
+
+            <div class="card h-100 shadow-sm">
+
+                <div
+                    class="card-header text-white"
+                    style="background: linear-gradient(90deg, #0d6efd, #6610f2, #198754);"
+                >
+
+                    <h5 class="mb-0">
+
+                        <i class="fas fa-road me-2"></i>
+
+                        Traffic Prediction AI
+
+                    </h5>
+
+                </div>
+
+
+                <div
+                    class="card-body"
+                    id="traffic-ai"
+                >
+
+                    <div class="text-center py-4 text-muted">
+
+                        <i
+                            class="fas fa-spinner fa-spin fa-2x mb-3"
+                        ></i>
+
+                        <p class="mb-0">
+                            Predicting congestion patterns...
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- CHARGING + ANOMALIES -->
+    <!-- ===================================================== -->
+
+    <div class="row g-4 mt-2">
+
+        <!-- CHARGING STATION -->
+
+        <div class="col-lg-6">
+
+            <div class="card h-100 shadow-sm">
+
+                <div
+                    class="card-header text-white"
+                    style="background: linear-gradient(90deg, #0d6efd, #6610f2, #198754);"
+                >
+
+                    <h5 class="mb-0">
+
+                        <i class="fas fa-charging-station me-2"></i>
+
+                        Charging Station Intelligence
+
+                    </h5>
+
+                </div>
+
+
+                <div
+                    class="card-body"
+                    id="station-ai"
+                >
+
+                    <div class="text-center py-4 text-muted">
+
+                        <i
+                            class="fas fa-spinner fa-spin fa-2x mb-3"
+                        ></i>
+
+                        <p class="mb-0">
+                            Finding optimal charging stations...
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ANOMALY DETECTION -->
+
+        <div class="col-lg-6">
+
+            <div class="card h-100 shadow-sm">
+
+                <div
+                    class="card-header text-white"
+                    style="background: linear-gradient(90deg, #0d6efd, #6610f2, #198754);"
+                >
+
+                    <h5 class="mb-0">
+
+                        <i class="fas fa-triangle-exclamation me-2"></i>
+
+                        AI Anomaly Detection
+
+                    </h5>
+
+                </div>
+
+
+                <div
+                    class="card-body"
+                    id="anomaly-ai"
+                >
+
+                    <div class="text-center py-4 text-muted">
+
+                        <i
+                            class="fas fa-spinner fa-spin fa-2x mb-3"
+                        ></i>
+
+                        <p class="mb-0">
+                            Scanning vehicle behaviour...
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- ECO INTELLIGENCE -->
+    <!-- ===================================================== -->
+
+    <div class="row g-4 mt-2">
+
+        <!-- ECO SCORE -->
+
+        <div class="col-lg-4">
+
+            <div class="card text-center h-100 shadow-sm">
+
+                <div class="card-body">
+
+                    <i
+                        class="fas fa-leaf fa-2x text-success mb-3"
+                    ></i>
+
+                    <h6>
+                        Fleet Eco Score
+                    </h6>
+
+                    <h2
+                        id="eco-score"
+                        class="text-success fw-bold"
+                    >
+                        -
+                    </h2>
+
+                    <small class="text-muted">
+                        Based on energy efficiency
+                        and driving behaviour
+                    </small>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- CO2 -->
+
+        <div class="col-lg-4">
+
+            <div class="card text-center h-100 shadow-sm">
+
+                <div class="card-body">
+
+                    <i
+                        class="fas fa-cloud fa-2x text-primary mb-3"
+                    ></i>
+
+                    <h6>
+                        CO₂ Avoided
+                    </h6>
+
+                    <h2
+                        id="co2-avoided"
+                        class="text-primary fw-bold"
+                    >
+                        -
+                    </h2>
+
+                    <small class="text-muted">
+                        Estimated environmental contribution
+                    </small>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ENERGY -->
+
+        <div class="col-lg-4">
+
+            <div class="card text-center h-100 shadow-sm">
+
+                <div class="card-body">
+
+                    <i
+                        class="fas fa-bolt fa-2x text-warning mb-3"
+                    ></i>
+
+                    <h6>
+                        Energy Efficiency
+                    </h6>
+
+                    <h2
+                        id="energy-efficiency"
+                        class="fw-bold"
+                    >
+                        -
+                    </h2>
+
+                    <small class="text-muted">
+                        Fleet energy-performance indicator
+                    </small>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ========================================================= -->
+<!-- FLEET AI JAVASCRIPT -->
+<!-- ========================================================= -->
+
+<script>
+
+class FleetEnergyAI {
+
+    constructor() {
+
+        this.vehicleData = [];
+        this.chargingData = [];
+        this.routeData = [];
+        this.stationData = [];
+        this.trafficData = [];
+        this.weatherData = [];
+
+    }
+
+
+    // =========================================================
+    // FETCH DATA
+    // =========================================================
+
+    async fetchData() {
+
+        try {
+
+            const responses = await Promise.all([
+
+                fetch("/api/vehicles/"),
+
+                fetch("/api/charging-logs/"),
+
+                fetch("/api/routes/"),
+
+                fetch("/api/stations/"),
+
+                fetch("/api/traffic/")
+
+            ]);
+
+
+            const [
+                vehiclesResponse,
+                chargingResponse,
+                routesResponse,
+                stationsResponse,
+                trafficResponse
+            ] = responses;
+
+
+            if (!vehiclesResponse.ok) {
+
+                throw new Error(
+                    "Vehicles API failed: " +
+                    vehiclesResponse.status
+                );
+
+            }
+
+
+            if (!chargingResponse.ok) {
+
+                throw new Error(
+                    "Charging API failed: " +
+                    chargingResponse.status
+                );
+
+            }
+
+
+            if (!routesResponse.ok) {
+
+                throw new Error(
+                    "Routes API failed: " +
+                    routesResponse.status
+                );
+
+            }
+
+
+            if (!stationsResponse.ok) {
+
+                throw new Error(
+                    "Stations API failed: " +
+                    stationsResponse.status
+                );
+
+            }
+
+
+            if (!trafficResponse.ok) {
+
+                throw new Error(
+                    "Traffic API failed: " +
+                    trafficResponse.status
+                );
+
+            }
+
+
+            const vehicles =
+                await vehiclesResponse.json();
+
+            const charging =
+                await chargingResponse.json();
+
+            const routes =
+                await routesResponse.json();
+
+            const stations =
+                await stationsResponse.json();
+
+            const traffic =
+                await trafficResponse.json();
+
+
+            this.vehicleData =
+                vehicles.results ||
+                vehicles ||
+                [];
+
+
+            this.chargingData =
+                charging.results ||
+                charging ||
+                [];
+
+
+            this.routeData =
+                routes.results ||
+                routes ||
+                [];
+
+
+            this.stationData =
+                stations.results ||
+                stations ||
+                [];
+
+
+            this.trafficData =
+                traffic.results ||
+                traffic ||
+                [];
+
+
+            console.log(
+                "Fleet AI data loaded successfully"
+            );
+
+
+            console.log(
+                "Vehicles:",
+                this.vehicleData
+            );
+
+
+            console.log(
+                "Charging:",
+                this.chargingData
+            );
+
+
+            console.log(
+                "Routes:",
+                this.routeData
+            );
+
+
+            console.log(
+                "Stations:",
+                this.stationData
+            );
+
+
+            console.log(
+                "Traffic:",
+                this.trafficData
+            );
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "AI data loading error:",
+                error
+            );
+
+            this.vehicleData = [];
+            this.chargingData = [];
+            this.routeData = [];
+            this.stationData = [];
+            this.trafficData = [];
+
+            throw error;
+
+        }
+
+    }
+
+
+    // =========================================================
+    // WEATHER
+    // =========================================================
+
+    analyzeWeatherImpact() {
+
+        return {
+
+            temperature: 34,
+
+            condition: "Hot",
+
+            rangeImpact: -8,
+
+            recommendation:
+                "High temperature may reduce battery efficiency. " +
+                "Avoid aggressive acceleration and park in shaded areas.",
+
+            confidence: 88
+
+        };
+
+    }
+
+
+    // =========================================================
+    // TRAFFIC
+    // =========================================================
+
+    analyzeTraffic() {
+
+        if (!this.trafficData.length) {
+
+            return {
+
+                congestion: "Unknown",
+
+                speed: 0,
+
+                recommendation:
+                    "Traffic information unavailable."
+
+            };
+
+        }
+
+
+        const speeds =
+            this.trafficData
+                .map(item => {
+
+                    return Number(
+
+                        item.average_speed ||
+
+                        item.speed ||
+
+                        0
+
+                    );
+
+                })
+                .filter(speed => !isNaN(speed));
+
+
+        if (!speeds.length) {
+
+            return {
+
+                congestion: "Unknown",
+
+                speed: 0,
+
+                recommendation:
+                    "Traffic speed information unavailable."
+
+            };
+
+        }
+
+
+        const avgSpeed =
+            speeds.reduce(
+                (sum, speed) =>
+                    sum + speed,
+                0
+            ) / speeds.length;
+
+
+        let congestion = "Low";
+
+
+        if (avgSpeed < 25) {
+
+            congestion = "Heavy";
+
+        }
+
+        else if (avgSpeed < 45) {
+
+            congestion = "Moderate";
+
+        }
+
+
+        let recommendation =
+            "Current traffic conditions are acceptable.";
+
+
+        if (congestion === "Heavy") {
+
+            recommendation =
+                "Consider alternative AI optimized routes.";
+
+        }
+
+        else if (congestion === "Moderate") {
+
+            recommendation =
+                "Traffic is moderate. Drive smoothly and maintain a steady speed.";
+
+        }
+
+
+        return {
+
+            congestion: congestion,
+
+            speed: avgSpeed,
+
+            recommendation: recommendation
+
+        };
+
+    }
+
+
+    // =========================================================
+    // CHARGING STATION
+    // =========================================================
+
+    recommendChargingStation() {
+
+        if (!this.stationData.length) {
+
+            return null;
+
+        }
+
+
+        const stations =
+            [...this.stationData];
+
+
+        stations.sort(
+            (a, b) => {
+
+                const aAvailable =
+                    Number(
+                        a.chargers_available ||
+                        0
+                    );
+
+
+                const bAvailable =
+                    Number(
+                        b.chargers_available ||
+                        0
+                    );
+
+
+                return (
+                    bAvailable -
+                    aAvailable
+                );
+
+            }
+        );
+
+
+        return stations[0];
+
+    }
+
+
+    // =========================================================
+    // ANOMALY DETECTION
+    // =========================================================
+
+    detectAnomalies() {
+
+        const anomalies = [];
+
+
+        this.vehicleData.forEach(
+            vehicle => {
+
+
+                const batteryCapacity =
+                    Number(
+                        vehicle.battery_capacity ||
+                        0
+                    );
+
+
+                const currentCharge =
+                    Number(
+                        vehicle.current_charge ||
+                        0
+                    );
+
+
+                let battery =
+                    Number(
+                        vehicle.battery_percentage ||
+                        0
+                    );
+
+
+                if (
+                    !battery &&
+                    batteryCapacity > 0
+                ) {
+
+                    battery =
+                        (
+                            currentCharge /
+                            batteryCapacity
+                        ) * 100;
+
+                }
+
+
+                const speed =
+                    Number(
+                        vehicle.speed ||
+                        0
+                    );
+
+
+                const status =
+                    String(
+                        vehicle.status ||
+                        ""
+                    ).toLowerCase();
+
+
+                if (battery < 15) {
+
+                    anomalies.push({
+
+                        vehicle:
+                            vehicle.id,
+
+                        severity:
+                            "Critical",
+
+                        issue:
+                            "Extremely Low Battery",
+
+                        action:
+                            "Send vehicle to nearest charging station."
+
+                    });
+
+                }
+
+
+                if (speed > 120) {
+
+                    anomalies.push({
+
+                        vehicle:
+                            vehicle.id,
+
+                        severity:
+                            "High",
+
+                        issue:
+                            "Abnormal Speed",
+
+                        action:
+                            "Check driver behaviour and vehicle telemetry."
+
+                    });
+
+                }
+
+
+                if (
+                    status === "maintenance"
+                ) {
+
+                    anomalies.push({
+
+                        vehicle:
+                            vehicle.id,
+
+                        severity:
+                            "Medium",
+
+                        issue:
+                            "Maintenance Required",
+
+                        action:
+                            "Schedule vehicle inspection."
+
+                    });
+
+                }
+
+            }
+        );
+
+
+        return anomalies;
+
+    }
+
+
+    // =========================================================
+    // ECO SCORE
+    // =========================================================
+
+    calculateEcoScore() {
+
+        if (!this.vehicleData.length) {
+
+            return 0;
+
+        }
+
+
+        let score = 100;
+
+
+        this.vehicleData.forEach(
+            vehicle => {
+
+                const speed =
+                    Number(
+                        vehicle.speed ||
+                        0
+                    );
+
+
+                if (speed > 100) {
+
+                    score -= 3;
+
+                }
+
+
+                if (speed > 120) {
+
+                    score -= 5;
+
+                }
+
+            }
+        );
+
+
+        return Math.max(
+            0,
+            Math.min(
+                100,
+                score
+            )
+        );
+
+    }
+
+
+    // =========================================================
+    // RENDER AI
+    // =========================================================
+
+    renderAdvancedAI() {
+
+
+        // -----------------------------------------------------
+        // WEATHER
+        // -----------------------------------------------------
+
+        const weather =
+            this.analyzeWeatherImpact();
+
+
+        const weatherElement =
+            document.getElementById(
+                "weather-ai"
+            );
+
+
+        if (weatherElement) {
+
+            weatherElement.innerHTML = `
+
+                <div class="text-center">
+
+                    <div class="mb-3">
+
+                        <i
+                            class="fas fa-temperature-high fa-3x text-danger"
+                        ></i>
+
+                    </div>
+
+
+                    <h2>
+                        ${weather.temperature}°C
+                    </h2>
+
+
+                    <h5>
+                        ${weather.condition}
+                    </h5>
+
+
+                    <p>
+
+                        Range Impact:
+
+                        <strong class="text-danger">
+
+                            ${weather.rangeImpact}%
+
+                        </strong>
+
+                    </p>
+
+
+                    <div
+                        class="alert alert-warning text-start"
+                    >
+
+                        <i
+                            class="fas fa-lightbulb me-2"
+                        ></i>
+
+                        ${weather.recommendation}
+
+                    </div>
+
+
+                    <small class="text-muted">
+
+                        AI Confidence:
+                        ${weather.confidence}%
+
+                    </small>
+
+                </div>
+
+            `;
+
+        }
+
+
+        // -----------------------------------------------------
+        // TRAFFIC
+        // -----------------------------------------------------
+
+        const traffic =
+            this.analyzeTraffic();
+
+
+        const trafficElement =
+            document.getElementById(
+                "traffic-ai"
+            );
+
+
+        if (trafficElement) {
+
+            let trafficClass =
+                "success";
+
+
+            if (
+                traffic.congestion ===
+                "Moderate"
+            ) {
+
+                trafficClass =
+                    "warning";
+
+            }
+
+
+            if (
+                traffic.congestion ===
+                "Heavy"
+            ) {
+
+                trafficClass =
+                    "danger";
+
+            }
+
+
+            trafficElement.innerHTML = `
+
+                <div class="text-center">
+
+                    <i
+                        class="fas fa-car fa-3x text-primary mb-3"
+                    ></i>
+
+
+                    <h4>
+
+                        ${traffic.congestion}
+                        Traffic
+
+                    </h4>
+
+
+                    <p>
+
+                        Average Speed:
+
+                        <strong>
+
+                            ${traffic.speed.toFixed(1)}
+                            km/h
+
+                        </strong>
+
+                    </p>
+
+
+                    <div
+                        class="alert alert-${trafficClass}"
+                    >
+
+                        ${traffic.recommendation}
+
+                    </div>
+
+                </div>
+
+            `;
+
+        }
+
+
+        // -----------------------------------------------------
+        // CHARGING STATION
+        // -----------------------------------------------------
+
+        const station =
+            this.recommendChargingStation();
+
+
+        const stationElement =
+            document.getElementById(
+                "station-ai"
+            );
+
+
+        if (stationElement) {
+
+            if (station) {
+
+                stationElement.innerHTML = `
+
+                    <div>
+
+                        <div class="mb-3">
+
+                            <i
+                                class="fas fa-charging-station fa-3x text-success"
+                            ></i>
+
+                        </div>
+
+
+                        <h4 class="text-success">
+
+                            ${station.name ||
+                            "Charging Station"}
+
+                        </h4>
+
+
+                        <hr>
+
+
+                        <p>
+
+                            <strong>
+                                Available Chargers:
+                            </strong>
+
+                            ${station.chargers_available ||
+                            0}
+
+                        </p>
+
+
+                        <p>
+
+                            <strong>
+                                Total Chargers:
+                            </strong>
+
+                            ${station.chargers_total ||
+                            0}
+
+                        </p>
+
+
+                        <p>
+
+                            <strong>
+                                Charger Type:
+                            </strong>
+
+                            ${station.charger_type ||
+                            "N/A"}
+
+                        </p>
+
+
+                        <p>
+
+                            <strong>
+                                Power:
+                            </strong>
+
+                            ${station.power_capacity ||
+                            0}
+                            kW
+
+                        </p>
+
+
+                        <p>
+
+                            <strong>
+                                Operator:
+                            </strong>
+
+                            ${station.operator_name ||
+                            "N/A"}
+
+                        </p>
+
+
+                        <button
+                            class="btn btn-success"
+                            onclick="window.location.href='/charging-finder/'"
+                        >
+
+                            <i
+                                class="fas fa-location-arrow me-2"
+                            ></i>
+
+                            Find Station
+
+                        </button>
+
+                    </div>
+
+                `;
+
+            }
+
+            else {
+
+                stationElement.innerHTML = `
+
+                    <div
+                        class="alert alert-warning"
+                    >
+
+                        <i
+                            class="fas fa-info-circle me-2"
+                        ></i>
+
+                        No charging station
+                        data available.
+
+                    </div>
+
+                `;
+
+            }
+
+        }
+
+
+        // -----------------------------------------------------
+        // ANOMALIES
+        // -----------------------------------------------------
+
+        const anomalies =
+            this.detectAnomalies();
+
+
+        const anomalyElement =
+            document.getElementById(
+                "anomaly-ai"
+            );
+
+
+        if (anomalyElement) {
+
+            if (!anomalies.length) {
+
+                anomalyElement.innerHTML = `
+
+                    <div
+                        class="alert alert-success"
+                    >
+
+                        <i
+                            class="fas fa-check-circle me-2"
+                        ></i>
+
+                        No abnormal vehicle
+                        behaviour detected.
+
+                    </div>
+
+                `;
+
+            }
+
+            else {
+
+                anomalyElement.innerHTML =
+
+                    anomalies
+                        .slice(0, 5)
+                        .map(
+                            anomaly => `
+
+                                <div
+                                    class="alert alert-warning"
+                                >
+
+                                    <strong>
+
+                                        Vehicle
+                                        #${anomaly.vehicle}
+
+                                    </strong>
+
+                                    <br>
+
+                                    <span>
+
+                                        ${anomaly.severity}
+
+                                    </span>
+
+                                    <br>
+
+                                    ${anomaly.issue}
+
+                                    <br>
+
+                                    <small>
+
+                                        ${anomaly.action}
+
+                                    </small>
+
+                                </div>
+
+                            `
+                        )
+                        .join("");
+
+            }
+
+        }
+
+
+        // -----------------------------------------------------
+        // ECO SCORE
+        // -----------------------------------------------------
+
+        const ecoScore =
+            this.calculateEcoScore();
+
+
+        const ecoElement =
+            document.getElementById(
+                "eco-score"
+            );
+
+
+        if (ecoElement) {
+
+            ecoElement.textContent =
+                `${ecoScore}/100`;
+
+        }
+
+
+        // -----------------------------------------------------
+        // ENERGY
+        // -----------------------------------------------------
+
+        const totalEnergy =
+            this.chargingData.reduce(
+                (sum, log) => {
+
+                    return (
+                        sum +
+                        Number(
+                            log.charge_amount ||
+                            log.energy_consumed ||
+                            log.energy_kwh ||
+                            log.energy ||
+                            0
+                        )
+                    );
+
+                },
+                0
+            );
+
+
+        const estimatedCO2 =
+            totalEnergy * 0.82;
+
+
+        const co2Element =
+            document.getElementById(
+                "co2-avoided"
+            );
+
+
+        if (co2Element) {
+
+            co2Element.textContent =
+                `${estimatedCO2.toFixed(1)} kg`;
+
+        }
+
+
+        // -----------------------------------------------------
+        // EFFICIENCY
+        // -----------------------------------------------------
+
+        const efficiencyElement =
+            document.getElementById(
+                "energy-efficiency"
+            );
+
+
+        if (efficiencyElement) {
+
+            let efficiency =
+                "Needs Improvement";
+
+
+            if (ecoScore >= 85) {
+
+                efficiency =
+                    "Excellent";
+
+            }
+
+            else if (ecoScore >= 70) {
+
+                efficiency =
+                    "Good";
+
+            }
+
+
+            efficiencyElement.textContent =
+                efficiency;
+
+        }
+
+    }
+
+}
+
+
+// =============================================================
+// START APPLICATION
+// =============================================================
+
+document.addEventListener(
+    "DOMContentLoaded",
+    async function () {
+
+        const statusElement =
+            document.getElementById(
+                "ai-status"
+            );
+
+
+        try {
+
+            console.log(
+                "Fleet Energy AI started..."
+            );
+
+
+            const fleetAI =
+                new FleetEnergyAI();
+
+
+            await fleetAI.fetchData();
+
+
+            fleetAI.renderAdvancedAI();
+
+
+            if (statusElement) {
+
+                statusElement.className =
+                    "alert alert-success";
+
+
+                statusElement.innerHTML = `
+
+                    <i
+                        class="fas fa-check-circle me-2"
+                    ></i>
+
+                    AI analysis completed successfully.
+
+                `;
+
+            }
+
+
+            console.log(
+                "Fleet Energy AI completed."
+            );
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Fleet AI initialization failed:",
+                error
+            );
+
+
+            if (statusElement) {
+
+                statusElement.className =
+                    "alert alert-danger";
+
+
+                statusElement.innerHTML = `
+
+                    <i
+                        class="fas fa-exclamation-triangle me-2"
+                    ></i>
+
+                    AI data could not be loaded.
+                    Check the Django API endpoints.
+
+                `;
+
+            }
+
+        }
+
+    }
+);
+
+</script>
+
+{% endblock %}
+```

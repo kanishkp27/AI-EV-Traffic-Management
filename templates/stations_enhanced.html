@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{{ page_title|default:"Charging Stations" }}</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            color: #1f2937;
+        }
+
+        .header {
+            background: #111827;
+            color: white;
+            padding: 25px;
+        }
+
+        .header h1 {
+            margin: 0 0 8px;
+        }
+
+        .header p {
+            margin: 0;
+            color: #d1d5db;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+        }
+
+        .stat-card h3 {
+            margin: 0 0 10px;
+            font-size: 15px;
+            color: #6b7280;
+        }
+
+        .stat-card strong {
+            font-size: 28px;
+        }
+
+        .stations {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .station-card {
+            background: white;
+            border-radius: 14px;
+            padding: 22px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+        }
+
+        .station-card h2 {
+            margin-top: 0;
+            margin-bottom: 5px;
+        }
+
+        .operator {
+            color: #6b7280;
+            margin-bottom: 15px;
+        }
+
+        .location {
+            margin: 10px 0;
+            line-height: 1.5;
+        }
+
+        .details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .detail {
+            background: #f9fafb;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .detail small {
+            display: block;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .operational {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .maintenance {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .offline {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .empty {
+            background: white;
+            padding: 40px;
+            text-align: center;
+            border-radius: 12px;
+        }
+
+        @media (max-width: 800px) {
+            .stats {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .stations {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 500px) {
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="header">
+    <h1>⚡ Enhanced Charging Stations</h1>
+    <p>EV charging station management and availability</p>
+</div>
+
+<div class="container">
+
+    <div class="stats">
+
+        <div class="stat-card">
+            <h3>Total Stations</h3>
+            <strong>{{ stations|length }}</strong>
+        </div>
+
+        <div class="stat-card">
+            <h3>Available Chargers</h3>
+            <strong>{{ total_available|default:"0" }}</strong>
+        </div>
+
+        <div class="stat-card">
+            <h3>Total Chargers</h3>
+            <strong>{{ total_chargers|default:"0" }}</strong>
+        </div>
+
+        <div class="stat-card">
+            <h3>Average Rating</h3>
+            <strong>{{ average_rating|default:"0" }}</strong>
+        </div>
+
+    </div>
+
+
+    {% if stations %}
+
+        <div class="stations">
+
+            {% for station in stations %}
+
+                <div class="station-card">
+
+                    <h2>{{ station.name }}</h2>
+
+                    {% if station.operator_name %}
+                        <div class="operator">
+                            {{ station.operator_name }}
+                        </div>
+                    {% endif %}
+
+                    <span class="status {{ station.operational_status }}">
+                        {{ station.get_operational_status_display }}
+                    </span>
+
+                    <div class="location">
+
+                        {% if station.address %}
+                            📍 {{ station.address }}<br>
+                        {% endif %}
+
+                        {% if station.city %}
+                            {{ station.city }},
+                        {% endif %}
+
+                        {% if station.state %}
+                            {{ station.state }}
+                        {% endif %}
+
+                        {% if station.pincode %}
+                            - {{ station.pincode }}
+                        {% endif %}
+
+                    </div>
+
+                    <div class="details">
+
+                        <div class="detail">
+                            <small>Available Chargers</small>
+                            <strong>
+                                {{ station.chargers_available }}
+                                /
+                                {{ station.chargers_total }}
+                            </strong>
+                        </div>
+
+                        <div class="detail">
+                            <small>Charger Type</small>
+                            <strong>
+                                {{ station.get_charger_type_display }}
+                            </strong>
+                        </div>
+
+                        <div class="detail">
+                            <small>Power</small>
+                            <strong>
+                                {{ station.power_capacity }} kW
+                            </strong>
+                        </div>
+
+                        <div class="detail">
+                            <small>Price</small>
+                            <strong>
+                                ₹{{ station.price_per_kwh }}/kWh
+                            </strong>
+                        </div>
+
+                        <div class="detail">
+                            <small>Rating</small>
+                            <strong>
+                                ⭐ {{ station.average_rating }}
+                            </strong>
+                        </div>
+
+                        <div class="detail">
+                            <small>Reviews</small>
+                            <strong>
+                                {{ station.total_reviews }}
+                            </strong>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <div class="empty">
+            <h2>No charging stations found</h2>
+            <p>Add charging stations from the Django admin or API.</p>
+        </div>
+
+    {% endif %}
+
+</div>
+
+</body>
+</html>

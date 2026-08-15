@@ -1,0 +1,478 @@
+{% extends 'base.html' %}
+
+{% block title %}Driver Dashboard - EV Manager India{% endblock %}
+
+{% block extra_js %}
+<script>
+    let map = null;
+    let markers = {};
+    let pollingInterval = null;
+    let allVehicles = [];
+    let autoRefresh = true;
+    let hasFitFleet = false;
+
+    function escapeHtml(value) {
+        const div = document.createElement('div');
+        div.textContent = String(value ?? '');
+        return div.innerHTML;
+    }
+
+    function initMap() {
+        map = L.map('map').setView([28.6139, 77.2090], 7);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+    }
+
+    function batteryColor(battery) {
+        return battery > 60 ? '#16a34a' : battery > 25 ? '#ea580c' : '#dc2626';
+    }
+
+    function validCoordinate(v) {
+        return Number.isFinite(Number(v.latitude)) && Number.isFinite(Number(v.longitude)) &&
+               !(Number(v.latitude) === 0 && Number(v.longitude) === 0);
+    }
+
+    async function updateVehicles() {
+        try {
+            const response = await fetch('/api/vehicles/', {headers:{Accept:'application/json'}});
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            allVehicles = data.results || data || [];
+            applyVehicleFilters();
+            updateLocalFleetStats();
+            updateStats();
+            document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+        } catch (error) {
+            console.error('Error updating vehicles:', error);
+        }
+    }
+
+    function applyVehicleFilters() {
+        const search = document.getElementById('vehicle-search')?.value.trim().toLowerCase() || '';
+        const status = document.getElementById('vehicle-status-filter')?.value || '';
+        const batteryFilter = document.getElementById('battery-filter')?.value || '';
+
+        const visible = allVehicles.filter(v => {
+            const battery = Number(v.battery_percentage || 0);
+            const text = `${v.id} ${v.vehicle_type || ''}`.toLowerCase();
+            if (search && !text.includes(search)) return false;
+            if (status && v.status !== status) return false;
+            if (batteryFilter === 'low' && battery >= 25) return false;
+            if (batteryFilter === 'medium' && !(battery >= 25 && battery <= 60)) return false;
+            if (batteryFilter === 'high' && battery <= 60) return false;
+            return true;
+        });
+
+        renderMarkers(visible);
+        renderFleetTable(visible);
+        document.getElementById('visible-vehicle-count').textContent = `${visible.length} vehicle${visible.length === 1 ? '' : 's'}`;
+    }
+
+    function renderMarkers(vehicles) {
+        const visibleIds = new Set(vehicles.map(v => String(v.id)));
+
+        Object.keys(markers).forEach(id => {
+            if (!visibleIds.has(String(id))) {
+                map.removeLayer(markers[id]);
+                delete markers[id];
+            }
+        });
+
+        vehicles.forEach(vehicle => {
+            if (!validCoordinate(vehicle)) return;
+            const battery = Number(vehicle.battery_percentage || 0);
+            const color = batteryColor(battery);
+            const icon = L.divIcon({
+                className: 'vehicle-marker',
+                html: `<div style="background:${color};color:white;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.35);font-weight:700;">${escapeHtml(vehicle.id)}</div>`,
+                iconSize:[34,34], iconAnchor:[17,17]
+            });
+
+            const popup = `
+                <strong>${escapeHtml(vehicle.vehicle_type)}</strong><br>
+                Battery: ${battery.toFixed(1)}%<br>
+                Speed: ${Number(vehicle.speed || 0).toFixed(1)} km/h<br>
+                Status: ${escapeHtml(vehicle.status)}<br>
+                <button class="btn btn-sm btn-primary mt-2" onclick="focusVehicle(${Number(vehicle.id)})">Track Vehicle</button>`;
+
+            if (!markers[vehicle.id]) {
+                markers[vehicle.id] = L.marker([vehicle.latitude, vehicle.longitude], {icon}).bindPopup(popup).addTo(map);
+            } else {
+                markers[vehicle.id].setLatLng([vehicle.latitude, vehicle.longitude]).setIcon(icon).setPopupContent(popup);
+            }
+        });
+
+        if (!hasFitFleet && vehicles.some(validCoordinate)) {
+            fitFleetOnMap();
+            hasFitFleet = true;
+        }
+    }
+
+    function renderFleetTable(vehicles) {
+        const body = document.getElementById('fleet-table-body');
+        if (!vehicles.length) {
+            body.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No vehicles match your filters.</td></tr>';
+            return;
+        }
+
+        body.innerHTML = vehicles.map(v => {
+            const battery = Number(v.battery_percentage || 0);
+            const badge = v.status === 'driving' ? 'success' : v.status === 'charging' ? 'warning' : v.status === 'maintenance' ? 'danger' : 'secondary';
+            return `<tr>
+                <td><strong>#${escapeHtml(v.id)}</strong><br><small>${escapeHtml(v.vehicle_type)}</small></td>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="progress flex-grow-1" style="min-width:90px;height:7px;"><div class="progress-bar" style="width:${Math.max(0,Math.min(100,battery))}%;background:${batteryColor(battery)}"></div></div>
+                        <small>${battery.toFixed(1)}%</small>
+                    </div>
+                </td>
+                <td>${Number(v.speed || 0).toFixed(1)} km/h</td>
+                <td><span class="badge bg-${badge}">${escapeHtml(v.status)}</span></td>
+                <td><small>${validCoordinate(v) ? `${Number(v.latitude).toFixed(4)}, ${Number(v.longitude).toFixed(4)}` : 'Unavailable'}</small></td>
+                <td><button class="btn btn-sm btn-outline-primary" onclick="focusVehicle(${Number(v.id)})"><i class="fas fa-location-dot"></i> Track</button></td>
+            </tr>`;
+        }).join('');
+    }
+
+    function updateLocalFleetStats() {
+        const count = allVehicles.length;
+        const low = allVehicles.filter(v => Number(v.battery_percentage || 0) < 25).length;
+        const avgSpeed = count ? allVehicles.reduce((s,v) => s + Number(v.speed || 0),0) / count : 0;
+        document.getElementById('low-battery-count').textContent = low;
+        document.getElementById('average-speed').textContent = avgSpeed.toFixed(1);
+    }
+
+    async function updateStats() {
+        try {
+            const response = await fetch('/api/vehicles/fleet_status/');
+            if (!response.ok) throw new Error();
+            const data = await response.json();
+            document.getElementById('total-vehicles').textContent = data.total_vehicles ?? allVehicles.length;
+            document.getElementById('driving').textContent = data.driving ?? 0;
+            document.getElementById('charging').textContent = data.charging ?? 0;
+            document.getElementById('idle').textContent = data.idle ?? 0;
+            document.getElementById('avg-battery').textContent = Number(data.average_battery_percentage || 0).toFixed(1) + '%';
+        } catch {
+            document.getElementById('total-vehicles').textContent = allVehicles.length;
+            document.getElementById('driving').textContent = allVehicles.filter(v => v.status === 'driving').length;
+            document.getElementById('charging').textContent = allVehicles.filter(v => v.status === 'charging').length;
+            document.getElementById('idle').textContent = allVehicles.filter(v => v.status === 'idle').length;
+            const avg = allVehicles.length ? allVehicles.reduce((s,v)=>s+Number(v.battery_percentage||0),0)/allVehicles.length : 0;
+            document.getElementById('avg-battery').textContent = avg.toFixed(1) + '%';
+        }
+    }
+
+    async function updateAlerts() {
+        try {
+            const response = await fetch('/api/alerts/active/');
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            const alerts = data.results || data || [];
+            document.getElementById('active-alert-count').textContent = alerts.length;
+            const container = document.getElementById('alerts-list');
+            if (!alerts.length) {
+                container.innerHTML = '<div class="alert alert-success mb-0"><i class="fas fa-circle-check"></i> No active alerts. Fleet is operating normally.</div>';
+                return;
+            }
+            container.innerHTML = alerts.map(alert => {
+                const severity = alert.severity === 'high' ? 'danger' : alert.severity === 'medium' ? 'warning' : 'info';
+                return `<div class="alert alert-${severity} alert-dismissible fade show">
+                    <strong>${escapeHtml(alert.alert_type_display || alert.alert_type)}</strong><br>
+                    Vehicle ${escapeHtml(alert.vehicle)}: ${escapeHtml(alert.message)}
+                    <button type="button" class="btn-close" onclick="resolveAlert(${Number(alert.id)})"></button>
+                </div>`;
+            }).join('');
+        } catch (error) {
+            console.error('Error updating alerts:', error);
+            document.getElementById('alerts-list').innerHTML = '<p class="text-danger mb-0">Unable to load active alerts.</p>';
+        }
+    }
+
+    async function resolveAlert(alertId) {
+        try {
+            const response = await fetch(`/api/alerts/${alertId}/resolve/`, {method:'POST'});
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            updateAlerts();
+        } catch {
+            alert('Unable to resolve this alert.');
+        }
+    }
+
+    function focusVehicle(id) {
+        const vehicle = allVehicles.find(v => Number(v.id) === Number(id));
+        if (!vehicle || !validCoordinate(vehicle)) return alert('Vehicle location is unavailable.');
+        map.setView([vehicle.latitude, vehicle.longitude], 15);
+        markers[id]?.openPopup();
+    }
+
+    function fitFleetOnMap() {
+        const points = allVehicles.filter(validCoordinate).map(v => [Number(v.latitude), Number(v.longitude)]);
+        if (!points.length) return;
+        map.fitBounds(points, {padding:[40,40], maxZoom:13});
+    }
+
+    function locateDriver() {
+        if (!navigator.geolocation) return alert('Geolocation is not supported by this browser.');
+        navigator.geolocation.getCurrentPosition(
+            pos => {
+                const point = [pos.coords.latitude, pos.coords.longitude];
+                L.circleMarker(point, {radius:9}).addTo(map).bindPopup('Your current location').openPopup();
+                map.setView(point, 14);
+            },
+            () => alert('Location permission was not granted.')
+        );
+    }
+
+    function refreshDashboard() {
+        updateVehicles();
+        updateAlerts();
+    }
+
+    function toggleAutoRefresh() {
+        autoRefresh = !autoRefresh;
+        document.getElementById('auto-refresh-label').textContent = `Auto: ${autoRefresh ? 'ON' : 'OFF'}`;
+        if (pollingInterval) clearInterval(pollingInterval);
+        pollingInterval = autoRefresh ? setInterval(refreshDashboard, 10000) : null;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initMap();
+        refreshDashboard();
+        pollingInterval = setInterval(refreshDashboard, 10000);
+        document.getElementById('vehicle-search')?.addEventListener('input', applyVehicleFilters);
+        document.getElementById('vehicle-status-filter')?.addEventListener('change', applyVehicleFilters);
+        document.getElementById('battery-filter')?.addEventListener('change', applyVehicleFilters);
+    });
+
+    window.addEventListener('beforeunload', () => {
+        if (pollingInterval) clearInterval(pollingInterval);
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header with gradient background -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div style="background: linear-gradient(135deg, rgba(255,107,53,0.08), rgba(0,70,135,0.08)); padding: 2rem; border-radius: 1rem; margin-bottom: 1rem;">
+                <h1 class="h2" style="color: var(--primary); font-weight: 700; margin-bottom: 0.5rem;">
+                    <i class="fas fa-tachometer-alt" style="margin-right: 0.75rem;"></i> Driver Dashboard
+                </h1>
+                <p class="text-muted mb-0" style="font-size: 1rem;">Real-time EV tracking and fleet management across Indian expressways</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <div class="stat-label">Total Vehicles</div>
+                        <div class="stat-value" id="total-vehicles">-</div>
+                    </div>
+                    <i class="fas fa-car" style="font-size: 1.75rem; color: var(--primary); opacity: 0.2;"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card" style="border-left-color: var(--success);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <div class="stat-label">Currently Driving</div>
+                        <div class="stat-value" style="color: var(--success);" id="driving">-</div>
+                    </div>
+                    <i class="fas fa-road" style="font-size: 1.75rem; color: var(--success); opacity: 0.2;"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card" style="border-left-color: var(--warning);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <div class="stat-label">Currently Charging</div>
+                        <div class="stat-value" style="color: var(--warning);" id="charging">-</div>
+                    </div>
+                    <i class="fas fa-bolt" style="font-size: 1.75rem; color: var(--warning); opacity: 0.2;"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card" style="border-left-color: var(--danger);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <div class="stat-label">Average Battery</div>
+                        <div class="stat-value" style="color: var(--danger);" id="avg-battery">-</div>
+                    </div>
+                    <i class="fas fa-battery-half" style="font-size: 1.75rem; color: var(--danger); opacity: 0.2;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Advanced Fleet Intelligence -->
+    <div class="row mb-4 g-3">
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card" style="border-left-color: var(--secondary);">
+                <div class="stat-label">Idle Vehicles</div>
+                <div class="stat-value" id="idle">-</div>
+                <small class="text-muted">Ready for dispatch</small>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card" style="border-left-color: var(--danger);">
+                <div class="stat-label">Low Battery</div>
+                <div class="stat-value text-danger" id="low-battery-count">-</div>
+                <small class="text-muted">Below 25%</small>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card" style="border-left-color: var(--success);">
+                <div class="stat-label">Average Speed</div>
+                <div class="stat-value" id="average-speed">-</div>
+                <small class="text-muted">km/h fleet average</small>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card" style="border-left-color: var(--warning);">
+                <div class="stat-label">Active Alerts</div>
+                <div class="stat-value" id="active-alert-count">-</div>
+                <small class="text-muted">Needs attention</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fleet Controls -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Search Vehicle</label>
+                    <input class="form-control" id="vehicle-search" placeholder="ID or vehicle model">
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" id="vehicle-status-filter">
+                        <option value="">All Statuses</option>
+                        <option value="driving">Driving</option>
+                        <option value="charging">Charging</option>
+                        <option value="idle">Idle</option>
+                        <option value="maintenance">Maintenance</option>
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <label class="form-label">Battery</label>
+                    <select class="form-select" id="battery-filter">
+                        <option value="">Any Battery</option>
+                        <option value="low">Low (&lt;25%)</option>
+                        <option value="medium">25–60%</option>
+                        <option value="high">Above 60%</option>
+                    </select>
+                </div>
+                <div class="col-lg-5 col-md-6">
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-primary" onclick="refreshDashboard()"><i class="fas fa-rotate"></i> Refresh</button>
+                        <button class="btn btn-outline-primary" onclick="fitFleetOnMap()"><i class="fas fa-expand"></i> Fit Fleet</button>
+                        <button class="btn btn-outline-success" onclick="locateDriver()"><i class="fas fa-location-crosshairs"></i> My Location</button>
+                        <button class="btn btn-outline-warning" onclick="toggleAutoRefresh()"><i class="fas fa-clock"></i> <span id="auto-refresh-label">Auto: ON</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, var(--success) 100%); color: white;">
+                    <h5 class="mb-0"><i class="fas fa-map"></i> Real-Time Vehicle Locations</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div id="map"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Live Fleet Table -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: linear-gradient(90deg, var(--primary), var(--secondary), var(--success)); color:white;">
+                    <h5 class="mb-0"><i class="fas fa-list"></i> Live Fleet Monitor</h5>
+                    <small id="visible-vehicle-count">0 vehicles</small>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Vehicle</th><th>Battery</th><th>Speed</th><th>Status</th><th>Location</th><th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fleet-table-body">
+                                <tr><td colspan="6" class="text-center text-muted py-4">Loading fleet...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, var(--success) 100%); color: white;">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Active Alerts</h5>
+                </div>
+                <div class="card-body">
+                    <div id="alerts-list" class="text-muted">
+                        <div class="spinner-loading"></div> Loading alerts...
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, var(--success) 100%); color: white;">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Quick Stats</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <small class="text-muted" style="font-weight: 600;">Fleet Health</small>
+                            <small style="color: var(--success); font-weight: 600;">75%</small>
+                        </div>
+                        <div class="progress" style="height: 6px; border-radius: 10px; background: #e5e7eb;">
+                            <div class="progress-bar" style="width: 75%; background: linear-gradient(90deg, var(--success), #10b981);"></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <small class="text-muted" style="font-weight: 600;">Charger Availability</small>
+                            <small style="color: var(--warning); font-weight: 600;">45%</small>
+                        </div>
+                        <div class="progress" style="height: 6px; border-radius: 10px; background: #e5e7eb;">
+                            <div class="progress-bar" style="width: 45%; background: linear-gradient(90deg, var(--warning), #f59e0b);"></div>
+                        </div>
+                    </div>
+                    <hr style="opacity: 0.3;">
+                    <div style="padding: 0.75rem; background: linear-gradient(135deg, rgba(255,107,53,0.05), rgba(0,70,135,0.05)); border-radius: 0.5rem;">
+                        <small class="text-muted" style="display: block; margin-bottom: 0.25rem; font-weight: 600;">Last Updated</small>
+                        <small style="color: var(--primary); font-weight: 600;"><span id="last-update">Just now</span></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

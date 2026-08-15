@@ -1,0 +1,487 @@
+{% extends 'base.html' %}
+
+{% block title %}चार्जिंग स्टेशन खोजें - ईवी मैनेजर{% endblock %}
+
+
+{% block extra_css %}
+<style>
+    .finder-kpi { border-left:4px solid var(--primary); }
+    .finder-kpi .value { font-size:1.55rem; font-weight:800; }
+    .station-card { transition:.2s ease; cursor:pointer; }
+    .station-card:hover { transform:translateY(-2px); box-shadow:0 8px 22px rgba(0,0,0,.08); }
+    .station-card.selected { outline:2px solid var(--secondary); }
+    .filter-chip { border-radius:999px; }
+    .map-toolbar {
+        position:absolute; top:10px; right:10px; z-index:500;
+        display:flex; flex-direction:column; gap:6px;
+    }
+    .map-toolbar button {
+        width:40px; height:40px; border:0; border-radius:8px;
+        background:white; box-shadow:0 2px 10px rgba(0,0,0,.18);
+    }
+    .station-marker-wrap { background:transparent; border:0; }
+    .station-pin {
+        width:40px; height:40px; border-radius:50%; display:flex; align-items:center;
+        justify-content:center; color:white; font-weight:bold; border:3px solid white;
+        box-shadow:0 3px 10px rgba(0,0,0,.25);
+    }
+    #finder-map { position:relative; }
+    .loading-overlay {
+        position:absolute; inset:0; background:rgba(255,255,255,.72); z-index:700;
+        display:none; place-items:center;
+    }
+    .loading-overlay.show { display:grid; }
+    .station-actions .btn { font-size:.78rem; }
+    .price-badge { background:#eef2ff; color:#4338ca; }
+    .distance-badge { background:#ecfeff; color:#0e7490; }
+    .favorite-active { color:#dc2626 !important; }
+    @media(max-width:767px) {
+        #finder-map { height:380px !important; }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let map = null;
+    let stationMarkers = {};
+    let allStations = [];
+    let filteredStations = [];
+    let userMarker = null;
+    let favoritesOnly = false;
+
+    function initMap() {
+        map = L.map('finder-map').setView([28.6139, 77.2090], 9);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+    }
+
+    function safeText(value) {
+        const div = document.createElement('div');
+        div.textContent = String(value ?? '');
+        return div.innerHTML;
+    }
+
+    function getFavorites() {
+        try { return JSON.parse(localStorage.getItem('ev-station-favorites') || '[]'); }
+        catch { return []; }
+    }
+
+    function toggleFavorite(id) {
+        let favorites = getFavorites();
+        id = String(id);
+        favorites = favorites.includes(id) ? favorites.filter(x => x !== id) : [...favorites, id];
+        localStorage.setItem('ev-station-favorites', JSON.stringify(favorites));
+        renderStations(filteredStations);
+    }
+
+    function getStationPrice(station) {
+        if (station.price_per_kwh !== undefined && station.price_per_kwh !== null) return Number(station.price_per_kwh);
+        return station.charger_type === 'dcfc' ? 15 : station.charger_type === 'level2' ? 12 : 8.5;
+    }
+
+    function showLoading(show) {
+        document.getElementById('map-loading').classList.toggle('show', show);
+    }
+
+    async function searchNearby() {
+        const lat = Number(document.getElementById('search-lat').value || 28.6139);
+        const lon = Number(document.getElementById('search-lon').value || 77.2090);
+        const radius = Number(document.getElementById('search-radius').value || 50);
+        showLoading(true);
+
+        try {
+            const response = await fetch(`/api/stations/nearby/?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&radius=${encodeURIComponent(radius)}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            allStations = Array.isArray(data) ? data : (data.results || []);
+            favoritesOnly = false;
+            applyStationFilters();
+
+            if (allStations.length) {
+                const bounds = L.latLngBounds(allStations.map(s => [s.latitude, s.longitude]));
+                map.fitBounds(bounds, {padding:[40,40], maxZoom:13});
+            }
+        } catch (error) {
+            console.error('Error fetching stations:', error);
+            document.getElementById('stations-list').innerHTML =
+                '<div class="alert alert-danger"><i class="fas fa-circle-exclamation me-2"></i>Unable to load charging stations. Check the Django API endpoint <code>/api/stations/nearby/</code>.</div>';
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    function applyStationFilters() {
+        const type = document.getElementById('charger-filter').value;
+        const minPower = Number(document.getElementById('power-filter').value || 0);
+        const minAvailable = Number(document.getElementById('availability-filter').value || 0);
+        const sort = document.getElementById('sort-filter').value;
+        const favorites = getFavorites();
+
+        filteredStations = allStations.filter(s => {
+            if (type && s.charger_type !== type) return false;
+            if (Number(s.power_capacity || 0) < minPower) return false;
+            if (Number(s.chargers_available || 0) < minAvailable) return false;
+            if (favoritesOnly && !favorites.includes(String(s.id))) return false;
+            return true;
+        });
+
+        filteredStations.sort((a,b) => {
+            if (sort === 'availability') return Number(b.chargers_available || 0) - Number(a.chargers_available || 0);
+            if (sort === 'power') return Number(b.power_capacity || 0) - Number(a.power_capacity || 0);
+            if (sort === 'rating') return Number(b.average_rating || 0) - Number(a.average_rating || 0);
+            return Number(a.distance ?? 999999) - Number(b.distance ?? 999999);
+        });
+
+        renderStations(filteredStations);
+        updateKPIs(filteredStations);
+    }
+
+    function renderStations(stations) {
+        Object.values(stationMarkers).forEach(marker => map.removeLayer(marker));
+        stationMarkers = {};
+        const resultsList = document.getElementById('stations-list');
+        const favorites = getFavorites();
+
+        if (!stations.length) {
+            resultsList.innerHTML = '<div class="alert alert-light text-muted">No charging stations match your filters.</div>';
+            return;
+        }
+
+        resultsList.innerHTML = '';
+        stations.forEach(station => {
+            const total = Math.max(1, Number(station.chargers_total || 0));
+            const available = Number(station.chargers_available || 0);
+            const availablePercent = station.availability_percentage !== undefined ?
+                Number(station.availability_percentage) : (available / total) * 100;
+            const statusColor = availablePercent > 50 ? '#16a34a' : availablePercent > 25 ? '#ea580c' : '#dc2626';
+            const price = getStationPrice(station);
+            const favorite = favorites.includes(String(station.id));
+
+            const marker = L.marker([station.latitude, station.longitude], {
+                icon: L.divIcon({
+                    className: 'station-marker-wrap',
+                    html: `<div class="station-pin" style="background:${statusColor}"><i class="fas fa-charging-station"></i></div>`,
+                    iconSize:[40,40], iconAnchor:[20,20]
+                })
+            }).bindPopup(`
+                <strong>${safeText(station.name)}</strong><br>
+                Available: ${available}/${total}<br>
+                Type: ${safeText(station.charger_type)}<br>
+                Power: ${Number(station.power_capacity || 0)} kW<br>
+                Approx. price: ₹${price.toFixed(2)}/kWh
+            `).addTo(map);
+
+            stationMarkers[station.id] = marker;
+            const distanceText = station.distance !== undefined && station.distance !== null ?
+                `${Number(station.distance).toFixed(1)} किमी दूर` : 'Distance unavailable';
+            const rating = Number(station.average_rating || 0);
+
+            resultsList.innerHTML += `
+                <div class="station-card mb-3 p-3 border rounded" onclick="focusStation('${station.id}')">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div>
+                            <h6 class="mb-1" style="color:var(--primary);font-weight:700;">${safeText(station.name)}</h6>
+                            <span class="badge distance-badge">${distanceText}</span>
+                            <span class="badge price-badge">₹${price.toFixed(2)}/kWh</span>
+                        </div>
+                        <button class="btn btn-sm btn-link ${favorite ? 'favorite-active' : 'text-muted'}" onclick="event.stopPropagation();toggleFavorite('${station.id}')" title="Favorite">
+                            <i class="${favorite ? 'fas' : 'far'} fa-heart"></i>
+                        </button>
+                    </div>
+                    <div class="mt-2 d-flex justify-content-between align-items-center">
+                        <small><strong>चार्जर्स:</strong> ${available}/${total} · <strong>Power:</strong> ${Number(station.power_capacity || 0)} kW</small>
+                        <span class="badge" style="background:${statusColor};color:white;">${availablePercent.toFixed(0)}% उपलब्ध</span>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted"><i class="fas fa-star text-warning"></i> ${rating ? rating.toFixed(1) : 'New'} · ${safeText(station.amenities || 'WiFi, शौचालय')}</small>
+                    </div>
+                    <div class="station-actions d-flex gap-2 mt-3">
+                        <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();openDirections(${station.latitude},${station.longitude})"><i class="fas fa-diamond-turn-right"></i> Directions</button>
+                        <button class="btn btn-sm btn-outline-success" onclick="event.stopPropagation();bookStation('${station.id}')"><i class="fas fa-calendar-check"></i> Book</button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="event.stopPropagation();estimateCharge(${price})"><i class="fas fa-calculator"></i> Cost</button>
+                    </div>
+                </div>`;
+        });
+    }
+
+    function updateKPIs(stations) {
+        document.getElementById('station-count').textContent = stations.length;
+        document.getElementById('available-chargers').textContent =
+            stations.reduce((sum,s) => sum + Number(s.chargers_available || 0), 0);
+        document.getElementById('fast-chargers').textContent =
+            stations.filter(s => s.charger_type === 'dcfc' || Number(s.power_capacity || 0) >= 100).length;
+        const nearest = [...stations].sort((a,b) => Number(a.distance ?? 999999) - Number(b.distance ?? 999999))[0];
+        document.getElementById('nearest-station').textContent = nearest ?
+            (nearest.distance !== undefined ? `${Number(nearest.distance).toFixed(1)} km` : nearest.name) : '--';
+    }
+
+    function focusStation(id) {
+        const station = allStations.find(s => String(s.id) === String(id));
+        if (!station) return;
+        map.setView([station.latitude, station.longitude], 15);
+        if (stationMarkers[id]) stationMarkers[id].openPopup();
+    }
+
+    function fitAllStations() {
+        if (!filteredStations.length) return;
+        map.fitBounds(L.latLngBounds(filteredStations.map(s => [s.latitude, s.longitude])), {padding:[40,40]});
+    }
+
+    function useMyLocation() {
+        if (!navigator.geolocation) return alert('Geolocation is not supported by this browser.');
+        showLoading(true);
+        navigator.geolocation.getCurrentPosition(position => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            document.getElementById('search-lat').value = lat.toFixed(6);
+            document.getElementById('search-lon').value = lon.toFixed(6);
+
+            if (userMarker) map.removeLayer(userMarker);
+            userMarker = L.marker([lat,lon]).addTo(map).bindPopup('Your current location');
+            map.setView([lat,lon], 12);
+            searchNearby();
+        }, () => {
+            showLoading(false);
+            alert('Unable to access your location. Please allow location permission.');
+        }, {enableHighAccuracy:true, timeout:10000});
+    }
+
+    function quickFilter(type) {
+        favoritesOnly = false;
+        if (type === 'fast') {
+            document.getElementById('charger-filter').value = 'dcfc';
+            document.getElementById('power-filter').value = '50';
+        } else if (type === 'available') {
+            document.getElementById('availability-filter').value = '1';
+        } else if (type === 'restaurant') {
+            filteredStations = allStations.filter(s => String(s.amenities || '').toLowerCase().includes('restaurant') || s.has_restaurant);
+            renderStations(filteredStations); updateKPIs(filteredStations); return;
+        } else if (type === 'restroom') {
+            filteredStations = allStations.filter(s => String(s.amenities || '').toLowerCase().includes('restroom') || String(s.amenities || '').includes('शौचालय') || s.has_restroom);
+            renderStations(filteredStations); updateKPIs(filteredStations); return;
+        }
+        applyStationFilters();
+    }
+
+    function showFavoritesOnly() {
+        favoritesOnly = !favoritesOnly;
+        applyStationFilters();
+    }
+
+    function resetStationFilters() {
+        favoritesOnly = false;
+        document.getElementById('charger-filter').value = '';
+        document.getElementById('power-filter').value = '0';
+        document.getElementById('availability-filter').value = '0';
+        document.getElementById('sort-filter').value = 'distance';
+        applyStationFilters();
+    }
+
+    function openDirections(lat, lon) {
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(lat)},${encodeURIComponent(lon)}`, '_blank', 'noopener');
+    }
+
+    function bookStation(id) {
+        window.location.href = `/charging-bookings/?station=${encodeURIComponent(id)}`;
+    }
+
+    function estimateCharge(rate) {
+        const kwh = Number(prompt('How many kWh do you want to charge?', '30'));
+        if (!Number.isFinite(kwh) || kwh <= 0) return;
+        alert(`Estimated charging cost: ₹${(kwh * rate).toFixed(2)}\nRate: ₹${rate.toFixed(2)}/kWh`);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initMap();
+        searchNearby();
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h2" style="color: var(--primary); font-weight: 700;">
+                <i class="fas fa-charging-station"></i> चार्जिंग स्टेशन खोजें
+            </h1>
+            <p class="text-muted" style="font-size: 1.1rem;">अपने पास इलेक्ट्रिक वाहन चार्जिंग स्टेशन ढूंढें</p>
+        </div>
+    </div>
+
+
+    <!-- Smart Charging KPIs -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="card finder-kpi h-100"><div class="card-body">
+                <small class="text-muted">Stations Found</small>
+                <div class="value" id="station-count">0</div>
+            </div></div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card finder-kpi h-100" style="border-left-color:var(--success);"><div class="card-body">
+                <small class="text-muted">Available Chargers</small>
+                <div class="value text-success" id="available-chargers">0</div>
+            </div></div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card finder-kpi h-100" style="border-left-color:var(--warning);"><div class="card-body">
+                <small class="text-muted">Fast Chargers</small>
+                <div class="value text-warning" id="fast-chargers">0</div>
+            </div></div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card finder-kpi h-100" style="border-left-color:#8b5cf6;"><div class="card-body">
+                <small class="text-muted">Nearest Station</small>
+                <div class="value" style="color:#8b5cf6;font-size:1.1rem;" id="nearest-station">--</div>
+            </div></div>
+        </div>
+    </div>
+
+    <!-- Search Panel -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, var(--success) 100%); color: white;">
+                    <h5 class="mb-0">खोज विकल्प</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label class="form-label">अक्षांश (Latitude)</label>
+                            <input type="number" class="form-control" id="search-lat" value="28.6139" step="0.0001" placeholder="28.6139">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">देशांतर (Longitude)</label>
+                            <input type="number" class="form-control" id="search-lon" value="77.2090" step="0.0001" placeholder="77.2090">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">त्रिज्या (किमी)</label>
+                            <input type="number" class="form-control" id="search-radius" value="50" min="1" max="100">
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end gap-2">
+                            <button class="btn w-100" style="background: var(--primary); color: white; border: none;" onclick="searchNearby()">
+                                <i class="fas fa-search"></i> खोजें
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="useMyLocation()" title="मेरा स्थान उपयोग करें">
+                                <i class="fas fa-location-dot"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Charger Type</label>
+                            <select id="charger-filter" class="form-select" onchange="applyStationFilters()">
+                                <option value="">All Types</option>
+                                <option value="dcfc">DC Fast Charging</option>
+                                <option value="level2">Level 2</option>
+                                <option value="level1">Level 1</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Minimum Power</label>
+                            <select id="power-filter" class="form-select" onchange="applyStationFilters()">
+                                <option value="0">Any Power</option>
+                                <option value="50">50+ kW</option>
+                                <option value="100">100+ kW</option>
+                                <option value="150">150+ kW</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Availability</label>
+                            <select id="availability-filter" class="form-select" onchange="applyStationFilters()">
+                                <option value="0">Any Availability</option>
+                                <option value="1">At least 1 charger</option>
+                                <option value="3">3+ chargers</option>
+                                <option value="5">5+ chargers</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Sort By</label>
+                            <select id="sort-filter" class="form-select" onchange="applyStationFilters()">
+                                <option value="distance">Nearest First</option>
+                                <option value="availability">Most Available</option>
+                                <option value="power">Highest Power</option>
+                                <option value="rating">Best Rating</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <button class="btn btn-sm btn-outline-primary filter-chip" onclick="quickFilter('fast')"><i class="fas fa-bolt"></i> Fast Charging</button>
+                        <button class="btn btn-sm btn-outline-success filter-chip" onclick="quickFilter('available')"><i class="fas fa-circle-check"></i> Available Now</button>
+                        <button class="btn btn-sm btn-outline-secondary filter-chip" onclick="quickFilter('restaurant')"><i class="fas fa-utensils"></i> Restaurant</button>
+                        <button class="btn btn-sm btn-outline-secondary filter-chip" onclick="quickFilter('restroom')"><i class="fas fa-restroom"></i> Restroom</button>
+                        <button class="btn btn-sm btn-outline-danger filter-chip" onclick="showFavoritesOnly()"><i class="fas fa-heart"></i> Favorites</button>
+                        <button class="btn btn-sm btn-outline-dark filter-chip" onclick="resetStationFilters()"><i class="fas fa-rotate-left"></i> Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map and Results -->
+    <div class="row">
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, var(--success) 100%); color: white;">
+                    <h5 class="mb-0"><i class="fas fa-map"></i> Station Locations</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div style="position:relative;">
+                        <div id="finder-map" style="height: 500px;"></div>
+                        <div id="map-loading" class="loading-overlay"><div class="text-center"><div class="spinner-border text-primary"></div><div class="mt-2">Finding charging stations...</div></div></div>
+                        <div class="map-toolbar">
+                            <button onclick="useMyLocation()" title="My Location"><i class="fas fa-location-crosshairs"></i></button>
+                            <button onclick="fitAllStations()" title="Show All Stations"><i class="fas fa-expand"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-list"></i> Available Stations</h5>
+                </div>
+                <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                    <div id="stations-list" class="text-muted">
+                        <div class="spinner-loading"></div> Loading stations...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Station Availability Legend -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Station Status Legend</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <div style="display: inline-block; width: 40px; height: 40px; background: #16a34a; border-radius: 50%; margin-bottom: 0.5rem;"></div>
+                            <p><strong>High Availability</strong><br><small class="text-muted">&gt; 50% chargers available</small></p>
+                        </div>
+                        <div class="col-md-4">
+                            <div style="display: inline-block; width: 40px; height: 40px; background: #ea580c; border-radius: 50%; margin-bottom: 0.5rem;"></div>
+                            <p><strong>Moderate Availability</strong><br><small class="text-muted">25-50% chargers available</small></p>
+                        </div>
+                        <div class="col-md-4">
+                            <div style="display: inline-block; width: 40px; height: 40px; background: #dc2626; border-radius: 50%; margin-bottom: 0.5rem;"></div>
+                            <p><strong>Low Availability</strong><br><small class="text-muted">&lt; 25% chargers available</small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

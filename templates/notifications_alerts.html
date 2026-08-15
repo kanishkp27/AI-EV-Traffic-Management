@@ -1,0 +1,466 @@
+{% extends 'base.html' %}
+
+{% block title %}Notifications & Alerts - EV Manager India{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div style="background: linear-gradient(135deg, rgba(255,107,53,0.08), rgba(0,70,135,0.08)); padding: 2rem; border-radius: 1rem;">
+                <h1 class="h2" style="color: var(--primary); font-weight: 700; margin-bottom: 0.5rem;">
+                    <i class="fas fa-bell"></i> Notifications & Alerts Center
+                </h1>
+                <p class="text-muted mb-0">Manage all your alerts, notifications, and important updates</p>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Notification Intelligence Summary -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-3 col-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <small class="text-muted">Total Notifications</small>
+                    <h3 class="mb-0" id="totalNotifications">0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <small class="text-muted">Unread</small>
+                    <h3 class="mb-0 text-primary" id="unreadNotifications">0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <small class="text-muted">Urgent Alerts</small>
+                    <h3 class="mb-0 text-danger" id="urgentNotifications">0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <small class="text-muted">Resolved</small>
+                    <h3 class="mb-0 text-success" id="resolvedNotifications">0</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Smart Notification Controls -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-lg-4 col-md-6">
+                    <label class="form-label">Search Notifications</label>
+                    <input class="form-control" id="notificationSearch" placeholder="Battery, charging, traffic, vehicle...">
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Category</label>
+                    <select class="form-select" id="notificationCategory">
+                        <option value="">All Categories</option>
+                        <option value="battery">Battery</option>
+                        <option value="charging">Charging</option>
+                        <option value="traffic">Traffic</option>
+                        <option value="weather">Weather</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="booking">Booking</option>
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <label class="form-label">Sort</label>
+                    <select class="form-select" id="notificationSort">
+                        <option value="newest">Newest</option>
+                        <option value="urgent">Urgent First</option>
+                        <option value="unread">Unread First</option>
+                    </select>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary flex-fill" onclick="loadNotifications()"><i class="fas fa-rotate"></i> Refresh</button>
+                        <button class="btn btn-outline-success flex-fill" onclick="markAllRead()"><i class="fas fa-check-double"></i> Read All</button>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3 d-flex justify-content-between flex-wrap gap-2">
+                <small class="text-muted" id="notificationStatus">Loading notification center...</small>
+                <button class="btn btn-sm btn-outline-danger" onclick="clearResolved()"><i class="fas fa-trash"></i> Clear Resolved</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Notification Settings -->
+        <div class="col-lg-3">
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, var(--success) 100%); color: white;">
+                    <h5 class="mb-0">Settings</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="battery-alerts" checked>
+                            <label class="form-check-label fw-500" for="battery-alerts">
+                                Battery Alerts
+                            </label>
+                        </div>
+                        <small class="text-muted d-block ms-4">Low battery, overheating</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="charging-alerts" checked>
+                            <label class="form-check-label fw-500" for="charging-alerts">
+                                Charging Alerts
+                            </label>
+                        </div>
+                        <small class="text-muted d-block ms-4">Charging complete, booking</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="traffic-alerts" checked>
+                            <label class="form-check-label fw-500" for="traffic-alerts">
+                                Traffic & Weather
+                            </label>
+                        </div>
+                        <small class="text-muted d-block ms-4">Road alerts, weather</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="maintenance-alerts" checked>
+                            <label class="form-check-label fw-500" for="maintenance-alerts">
+                                Maintenance Alerts
+                            </label>
+                        </div>
+                        <small class="text-muted d-block ms-4">Service reminders</small>
+                    </div>
+
+                    <hr>
+
+                    <h6>Notification Channel</h6>
+                    <div class="mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="push-notif" checked>
+                            <label class="form-check-label" for="push-notif">
+                                Push Notifications
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="sms-notif" checked>
+                            <label class="form-check-label" for="sms-notif">
+                                SMS Alerts
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="email-notif" checked>
+                            <label class="form-check-label" for="email-notif">
+                                Email Digest
+                            </label>
+                        </div>
+                    </div>
+
+                    <button class="btn w-100" onclick="saveNotificationSettings()" style="background: linear-gradient(135deg, var(--primary), #e85a1f); color: white; font-weight: 600;">
+                        <i class="fas fa-save"></i> Save Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications Feed -->
+        <div class="col-lg-9">
+            <!-- Filter Tabs -->
+            <div class="card mb-4">
+                <div class="card-body p-2">
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="filter" id="all" value="all" checked>
+                        <label class="btn btn-outline-primary" for="all">All Notifications</label>
+                        
+                        <input type="radio" class="btn-check" name="filter" id="unread" value="unread">
+                        <label class="btn btn-outline-primary" for="unread">Unread (5)</label>
+                        
+                        <input type="radio" class="btn-check" name="filter" id="urgent" value="urgent">
+                        <label class="btn btn-outline-primary" for="urgent">Urgent (3)</label>
+                        
+                        <input type="radio" class="btn-check" name="filter" id="resolved" value="resolved">
+                        <label class="btn btn-outline-primary" for="resolved">Resolved</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications List -->
+            <div id="notifications-list">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary"></div>
+                    <p class="text-muted mt-2">Loading notifications...</p>
+                </div>
+            </div>
+
+            <!-- Load More -->
+            <div class="text-center py-3">
+                <button class="btn btn-outline-primary" onclick="loadMoreNotifications()" id="loadMoreBtn">
+                    <i class="fas fa-sync"></i> Load More Notifications
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let notifications = [];
+let currentFilter = 'all';
+let visibleLimit = 10;
+
+function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = String(value ?? '');
+    return div.innerHTML;
+}
+
+function apiResults(data) {
+    return Array.isArray(data) ? data : (data.results || []);
+}
+
+function csrfToken() {
+    const name = 'csrftoken=';
+    const item = document.cookie.split(';').map(x => x.trim()).find(x => x.startsWith(name));
+    return item ? decodeURIComponent(item.substring(name.length)) : '';
+}
+
+function notificationMeta(n) {
+    const type = String(n.notification_type || n.alert_type || '').toLowerCase();
+    if (type.includes('battery') || type.includes('overheat')) return {category:'battery', icon:'fa-battery-quarter', color:'danger'};
+    if (type.includes('charging') || type.includes('charger')) return {category:'charging', icon:'fa-charging-station', color:'success'};
+    if (type.includes('traffic') || type.includes('route')) return {category:'traffic', icon:'fa-traffic-light', color:'warning'};
+    if (type.includes('weather')) return {category:'weather', icon:'fa-cloud-rain', color:'info'};
+    if (type.includes('maintenance') || type.includes('service')) return {category:'maintenance', icon:'fa-tools', color:'warning'};
+    if (type.includes('booking')) return {category:'booking', icon:'fa-calendar-check', color:'primary'};
+    return {category:'general', icon:'fa-bell', color:'secondary'};
+}
+
+function normalizedNotification(n, source='notification') {
+    const meta = notificationMeta(n);
+    return {
+        ...n,
+        _source: source,
+        _category: meta.category,
+        _icon: meta.icon,
+        _color: meta.color,
+        _read: source === 'alert' ? Boolean(n.resolved) : Boolean(n.is_read),
+        _resolved: source === 'alert' ? Boolean(n.resolved) : Boolean(n.resolved),
+        _urgent: n.severity === 'high' || ['battery_low','low_battery','emergency'].includes(n.notification_type || n.alert_type),
+        _created: n.created_at || n.timestamp || new Date().toISOString(),
+        _title: n.title || n.alert_type_display || String(n.notification_type || n.alert_type || 'Notification').replaceAll('_',' '),
+        _message: n.message || ''
+    };
+}
+
+async function loadNotifications() {
+    const status = document.getElementById('notificationStatus');
+    status.textContent = 'Refreshing notifications...';
+
+    const combined = [];
+    const requests = [
+        fetch('/api/notifications/', {headers:{Accept:'application/json'}})
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .then(data => apiResults(data).forEach(n => combined.push(normalizedNotification(n, 'notification'))))
+            .catch(() => {}),
+        fetch('/api/alerts/', {headers:{Accept:'application/json'}})
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .then(data => apiResults(data).forEach(n => combined.push(normalizedNotification(n, 'alert'))))
+            .catch(() => {})
+    ];
+
+    await Promise.all(requests);
+    notifications = combined;
+    visibleLimit = 10;
+    applyNotificationFilters();
+    status.textContent = `${notifications.length} notifications loaded · ${new Date().toLocaleTimeString()}`;
+}
+
+function applyNotificationFilters() {
+    const search = document.getElementById('notificationSearch').value.trim().toLowerCase();
+    const category = document.getElementById('notificationCategory').value;
+    const sort = document.getElementById('notificationSort').value;
+
+    let list = notifications.filter(n => {
+        const text = `${n._title} ${n._message} ${n.notification_type || ''} ${n.alert_type || ''}`.toLowerCase();
+        if (search && !text.includes(search)) return false;
+        if (category && n._category !== category) return false;
+        if (currentFilter === 'unread' && n._read) return false;
+        if (currentFilter === 'urgent' && !n._urgent) return false;
+        if (currentFilter === 'resolved' && !n._resolved) return false;
+        return true;
+    });
+
+    list.sort((a,b) => {
+        if (sort === 'urgent') return Number(b._urgent) - Number(a._urgent) || new Date(b._created) - new Date(a._created);
+        if (sort === 'unread') return Number(a._read) - Number(b._read) || new Date(b._created) - new Date(a._created);
+        return new Date(b._created) - new Date(a._created);
+    });
+
+    renderNotifications(list.slice(0, visibleLimit));
+    updateNotificationKPIs();
+    document.getElementById('loadMoreBtn').style.display = list.length > visibleLimit ? '' : 'none';
+}
+
+function renderNotifications(list) {
+    const container = document.getElementById('notifications-list');
+    if (!list.length) {
+        container.innerHTML = '<div class="alert alert-light border text-center py-4"><i class="fas fa-bell-slash fa-2x text-muted mb-2"></i><br>No notifications match your filters.</div>';
+        return;
+    }
+
+    container.innerHTML = list.map(n => {
+        const time = new Date(n._created);
+        const timeText = Number.isNaN(time.getTime()) ? '' : time.toLocaleString();
+        const readStyle = n._read ? 'opacity:.72;' : '';
+        const badge = n._urgent ? 'Urgent' : n._resolved ? 'Resolved' : n._read ? 'Read' : 'New';
+
+        return `<div class="card mb-3 shadow-sm" style="border-left:4px solid var(--bs-${n._color}, #6c757d);${readStyle}">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start gap-3">
+                    <div class="d-flex gap-3 flex-grow-1">
+                        <i class="fas ${n._icon} text-${n._color} fs-4 mt-1"></i>
+                        <div>
+                            <h6 class="mb-1 text-capitalize">${escapeHtml(n._title)}</h6>
+                            <small class="text-muted">${escapeHtml(timeText)} · ${escapeHtml(n._category)}</small>
+                            <p class="mb-2 mt-2">${escapeHtml(n._message)}</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                ${!n._read ? `<button class="btn btn-sm btn-outline-primary" onclick="markRead('${n._source}',${Number(n.id)})"><i class="fas fa-check"></i> Mark Read</button>` : ''}
+                                ${n._source === 'alert' && !n._resolved ? `<button class="btn btn-sm btn-outline-success" onclick="resolveAlert(${Number(n.id)})"><i class="fas fa-check-double"></i> Resolve</button>` : ''}
+                                ${n._category === 'battery' || n._category === 'charging' ? `<a class="btn btn-sm btn-success" href="/charging-finder/"><i class="fas fa-charging-station"></i> Find Charger</a>` : ''}
+                                ${n._category === 'traffic' ? `<a class="btn btn-sm btn-warning" href="/smart-route-planner/"><i class="fas fa-route"></i> Smart Route</a>` : ''}
+                                ${n._category === 'weather' ? `<a class="btn btn-sm btn-info" href="/weather-traffic/"><i class="fas fa-cloud"></i> Weather</a>` : ''}
+                                ${n._category === 'maintenance' ? `<a class="btn btn-sm btn-outline-warning" href="/vehicles/"><i class="fas fa-wrench"></i> Vehicle Health</a>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <span class="badge bg-${n._urgent ? 'danger' : n._resolved ? 'success' : n._color}">${badge}</span>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function updateNotificationKPIs() {
+    document.getElementById('totalNotifications').textContent = notifications.length;
+    document.getElementById('unreadNotifications').textContent = notifications.filter(n => !n._read).length;
+    document.getElementById('urgentNotifications').textContent = notifications.filter(n => n._urgent && !n._resolved).length;
+    document.getElementById('resolvedNotifications').textContent = notifications.filter(n => n._resolved).length;
+
+    const unread = notifications.filter(n => !n._read).length;
+    const urgent = notifications.filter(n => n._urgent && !n._resolved).length;
+    const unreadLabel = document.querySelector('label[for="unread"]');
+    const urgentLabel = document.querySelector('label[for="urgent"]');
+    if (unreadLabel) unreadLabel.textContent = `Unread (${unread})`;
+    if (urgentLabel) urgentLabel.textContent = `Urgent (${urgent})`;
+}
+
+async function markRead(source, id) {
+    const urls = source === 'notification'
+        ? [`/api/notifications/${id}/mark_read/`, `/api/notifications/${id}/read/`]
+        : [];
+
+    let success = false;
+    for (const url of urls) {
+        try {
+            const response = await fetch(url, {
+                method:'POST',
+                headers:{'X-CSRFToken':csrfToken()}
+            });
+            if (response.ok) { success = true; break; }
+        } catch {}
+    }
+
+    const item = notifications.find(n => n._source === source && Number(n.id) === Number(id));
+    if (item) item._read = true;
+    applyNotificationFilters();
+    if (!success && source === 'notification') {
+        console.warn('Mark-read API endpoint not found; UI updated locally.');
+    }
+}
+
+async function resolveAlert(id) {
+    try {
+        const response = await fetch(`/api/alerts/${id}/resolve/`, {
+            method:'POST',
+            headers:{'X-CSRFToken':csrfToken()}
+        });
+        if (!response.ok) throw new Error();
+        const item = notifications.find(n => n._source === 'alert' && Number(n.id) === Number(id));
+        if (item) { item._resolved = true; item._read = true; }
+        applyNotificationFilters();
+    } catch {
+        alert('Unable to resolve this alert. Check the Django resolve endpoint.');
+    }
+}
+
+async function markAllRead() {
+    const unread = notifications.filter(n => !n._read && n._source === 'notification');
+    for (const n of unread) await markRead('notification', n.id);
+    notifications.forEach(n => n._read = true);
+    applyNotificationFilters();
+}
+
+function clearResolved() {
+    notifications = notifications.filter(n => !n._resolved);
+    applyNotificationFilters();
+}
+
+function loadMoreNotifications() {
+    visibleLimit += 10;
+    applyNotificationFilters();
+}
+
+function saveNotificationSettings() {
+    const ids = ['battery-alerts','charging-alerts','traffic-alerts','maintenance-alerts','push-notif','sms-notif','email-notif'];
+    const settings = {};
+    ids.forEach(id => settings[id] = document.getElementById(id).checked);
+    localStorage.setItem('ev_notification_settings', JSON.stringify(settings));
+    document.getElementById('notificationStatus').textContent = 'Notification preferences saved on this device.';
+}
+
+function loadNotificationSettings() {
+    try {
+        const settings = JSON.parse(localStorage.getItem('ev_notification_settings') || '{}');
+        Object.entries(settings).forEach(([id,value]) => {
+            const el = document.getElementById(id);
+            if (el) el.checked = Boolean(value);
+        });
+    } catch {}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadNotificationSettings();
+
+    document.querySelectorAll('input[name="filter"]').forEach(el => {
+        el.addEventListener('change', e => {
+            currentFilter = e.target.value;
+            visibleLimit = 10;
+            applyNotificationFilters();
+        });
+    });
+
+    document.getElementById('notificationSearch').addEventListener('input', applyNotificationFilters);
+    document.getElementById('notificationCategory').addEventListener('change', applyNotificationFilters);
+    document.getElementById('notificationSort').addEventListener('change', applyNotificationFilters);
+
+    loadNotifications();
+    setInterval(loadNotifications, 30000);
+});
+</script>
+{% endblock %}

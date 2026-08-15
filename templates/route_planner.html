@@ -1,0 +1,579 @@
+{% extends 'base.html' %}
+
+{% block title %}Route Planner - EV Manager{% endblock %}
+
+{% block extra_js %}
+<script>
+    let map = null;
+    let routeLayer = null;
+    let routeMarkers = [];
+    let stationMarkers = {};
+    let allStations = [];
+
+    function csrfToken() {
+        const input = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (input?.value) return input.value;
+        const cookie = document.cookie.split(';').map(v => v.trim()).find(v => v.startsWith('csrftoken='));
+        return cookie ? decodeURIComponent(cookie.substring('csrftoken='.length)) : '';
+    }
+
+    function escapeHtml(value) {
+        const div = document.createElement('div');
+        div.textContent = String(value ?? '');
+        return div.innerHTML;
+    }
+
+    function initMap() {
+        map = L.map('route-map').setView([28.6139, 77.2090], 7);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        map.on('click', e => {
+            const originLat = document.getElementById('origin-lat');
+            const originLon = document.getElementById('origin-lon');
+            const destLat = document.getElementById('dest-lat');
+            const destLon = document.getElementById('dest-lon');
+
+            if (document.activeElement === originLat || document.activeElement === originLon) {
+                originLat.value = e.latlng.lat.toFixed(5);
+                originLon.value = e.latlng.lng.toFixed(5);
+            } else if (document.activeElement === destLat || document.activeElement === destLon) {
+                destLat.value = e.latlng.lat.toFixed(5);
+                destLon.value = e.latlng.lng.toFixed(5);
+            }
+            updateRangeEstimate();
+        });
+    }
+
+    function validCoordinate(lat, lon) {
+        return Number.isFinite(lat) && Number.isFinite(lon) &&
+            lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+    }
+
+    function haversine(lat1, lon1, lat2, lon2) {
+        const R = 6371;
+        const toRad = x => x * Math.PI / 180;
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+        const a = Math.sin(dLat/2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2) ** 2;
+        return 2 * R * Math.asin(Math.sqrt(a));
+    }
+
+    function getPlannerValues() {
+        return {
+            originLat: parseFloat(document.getElementById('origin-lat').value),
+            originLon: parseFloat(document.getElementById('origin-lon').value),
+            destLat: parseFloat(document.getElementById('dest-lat').value),
+            destLon: parseFloat(document.getElementById('dest-lon').value),
+            currentBattery: parseFloat(document.getElementById('current-battery').value || 0),
+            batteryCapacity: parseFloat(document.getElementById('battery-capacity').value || 75),
+            consumption: parseFloat(document.getElementById('consumption-rate')?.value || 16),
+            reserve: parseFloat(document.getElementById('reserve-battery')?.value || 15),
+            price: parseFloat(document.getElementById('charging-price')?.value || 12),
+            mode: document.getElementById('route-mode')?.value || 'balanced'
+        };
+    }
+
+    function updateRangeEstimate() {
+        const v = getPlannerValues();
+        const usableEnergy = Math.max(0, v.currentBattery - (v.batteryCapacity * v.reserve / 100));
+        const range = v.consumption > 0 ? usableEnergy / v.consumption * 100 : 0;
+        document.getElementById('estimated-range').textContent = `${range.toFixed(0)} km`;
+        document.getElementById('energy-efficiency').textContent = `${v.consumption.toFixed(1)} kWh/100km`;
+    }
+
+    async function suggestRoute() {
+        const v = getPlannerValues();
+
+        if (!validCoordinate(v.originLat, v.originLon) || !validCoordinate(v.destLat, v.destLon)) {
+            alert('Please enter valid origin and destination coordinates.');
+            return;
+        }
+        if (v.currentBattery < 0 || v.batteryCapacity <= 0 || v.currentBattery > v.batteryCapacity) {
+            alert('Current battery must be between 0 and battery capacity.');
+            return;
+        }
+
+        const status = document.getElementById('planner-status');
+        status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI is calculating route, energy and charging stops...';
+
+        const payload = {
+            origin_lat: v.originLat,
+            origin_lon: v.originLon,
+            destination_lat: v.destLat,
+            destination_lon: v.destLon,
+            current_battery: v.currentBattery,
+            battery_capacity: v.batteryCapacity,
+            reserve_battery_percentage: v.reserve,
+            consumption_rate: v.consumption,
+            route_mode: v.mode
+        };
+
+        try {
+            const response = await fetch('/api/routes/suggest/', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json', 'X-CSRFToken':csrfToken()},
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            displayRoute(data);
+            status.textContent = `Route calculated successfully · ${new Date().toLocaleTimeString()}`;
+        } catch (error) {
+            console.warn('Route API unavailable, using local EV estimate.', error);
+            const distance = haversine(v.originLat, v.originLon, v.destLat, v.destLon) * 1.15;
+            const energy = distance * v.consumption / 100;
+            const availableEnergy = Math.max(0, v.currentBattery - v.batteryCapacity * v.reserve / 100);
+            displayRoute({
+                route: {
+                    origin_lat:v.originLat, origin_lon:v.originLon,
+                    destination_lat:v.destLat, destination_lon:v.destLon
+                },
+                distance,
+                energy_needed:energy,
+                can_reach_without_charging: availableEnergy >= energy,
+                charging_stops:[]
+            });
+            status.textContent = 'Backend route API unavailable — showing local estimated route.';
+        }
+    }
+
+    function clearRouteLayers() {
+        if (routeLayer) {
+            map.removeLayer(routeLayer);
+            routeLayer = null;
+        }
+        routeMarkers.forEach(marker => map.removeLayer(marker));
+        routeMarkers = [];
+        Object.values(stationMarkers).forEach(marker => map.removeLayer(marker));
+        stationMarkers = {};
+    }
+
+    function makeMarker(lat, lon, html, popup) {
+        const marker = L.marker([lat, lon], {
+            icon: L.divIcon({
+                className:'custom-route-marker',
+                html,
+                iconSize:[34,34],
+                iconAnchor:[17,17]
+            })
+        }).bindPopup(popup).addTo(map);
+        routeMarkers.push(marker);
+        return marker;
+    }
+
+    function displayRoute(routeData) {
+        clearRouteLayers();
+
+        const route = routeData.route || {};
+        const chargingStops = routeData.charging_stops || [];
+        const v = getPlannerValues();
+        const distance = Number(routeData.distance || haversine(route.origin_lat, route.origin_lon, route.destination_lat, route.destination_lon));
+        const energy = Number(routeData.energy_needed || distance * v.consumption / 100);
+        const estimatedCost = Math.max(0, energy - v.currentBattery) * v.price;
+
+        const routeCoordinates = Array.isArray(routeData.geometry) && routeData.geometry.length
+            ? routeData.geometry.map(p => Array.isArray(p) ? p : [p.latitude, p.longitude])
+            : [
+                [route.origin_lat, route.origin_lon],
+                ...chargingStops.map(s => [s.station.latitude, s.station.longitude]),
+                [route.destination_lat, route.destination_lon]
+            ];
+
+        routeLayer = L.polyline(routeCoordinates, {color:'#1e40af', weight:5, opacity:.8}).addTo(map);
+
+        makeMarker(
+            route.origin_lat, route.origin_lon,
+            '<div style="background:#16a34a;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;border:3px solid white;box-shadow:0 2px 8px #555"><i class="fas fa-play"></i></div>',
+            'Start Location'
+        );
+
+        makeMarker(
+            route.destination_lat, route.destination_lon,
+            '<div style="background:#dc2626;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;border:3px solid white;box-shadow:0 2px 8px #555"><i class="fas fa-flag-checkered"></i></div>',
+            'Destination'
+        );
+
+        chargingStops.forEach((stop,index) => {
+            const station = stop.station;
+            const marker = L.marker([station.latitude, station.longitude], {
+                icon:L.divIcon({
+                    className:'route-marker-stop',
+                    html:`<div style="background:#ea580c;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;border:3px solid white;box-shadow:0 2px 8px #555">${index+1}</div>`,
+                    iconSize:[34,34], iconAnchor:[17,17]
+                })
+            }).bindPopup(`
+                <strong>${escapeHtml(station.name)}</strong><br>
+                Available: ${Number(station.chargers_available || 0)}/${Number(station.chargers_total || 0)}<br>
+                Power: ${Number(station.power_capacity || 0)} kW<br>
+                Distance: ${Number(stop.distance_from_origin || 0).toFixed(1)} km
+            `).addTo(map);
+            stationMarkers[station.id || `stop-${index}`] = marker;
+        });
+
+        const bounds = L.latLngBounds(routeCoordinates);
+        if (bounds.isValid()) map.fitBounds(bounds, {padding:[40,40]});
+
+        document.getElementById('charging-stop-count').textContent = chargingStops.length;
+        document.getElementById('estimated-cost').textContent = `₹${estimatedCost.toFixed(0)}`;
+        updateRangeEstimate();
+
+        const duration = Number(routeData.estimated_duration || route.estimated_duration || distance / 60 * 60);
+        const arrivalBatteryKwh = Math.max(0, v.currentBattery - energy);
+        const arrivalPct = v.batteryCapacity > 0 ? arrivalBatteryKwh / v.batteryCapacity * 100 : 0;
+
+        let html = `
+            <div class="alert ${routeData.can_reach_without_charging ? 'alert-success' : 'alert-warning'}">
+                <strong><i class="fas fa-brain"></i> AI Route Summary</strong><br>
+                Distance: <strong>${distance.toFixed(1)} km</strong><br>
+                Energy Needed: <strong>${energy.toFixed(1)} kWh</strong><br>
+                Approx. Driving Time: <strong>${Math.round(duration)} min</strong><br>
+                Estimated Arrival Battery: <strong>${arrivalPct.toFixed(0)}%</strong><br>
+                Route Mode: <strong>${escapeHtml(v.mode)}</strong><br>
+                Direct Reach: <strong>${routeData.can_reach_without_charging ? 'Yes ✓' : 'Charging stop recommended'}</strong>
+            </div>
+        `;
+
+        if (chargingStops.length) {
+            html += '<h6 class="mt-3"><i class="fas fa-charging-station text-warning"></i> Recommended Charging Stops</h6>';
+            chargingStops.forEach((stop,idx) => {
+                const station = stop.station;
+                html += `
+                    <div class="card mb-2 border-warning">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between">
+                                <strong>Stop ${idx+1}: ${escapeHtml(station.name)}</strong>
+                                <span class="badge bg-warning text-dark">${Number(station.power_capacity || 0)} kW</span>
+                            </div>
+                            <small class="text-muted">
+                                ${Number(stop.distance_from_origin || 0).toFixed(1)} km from origin ·
+                                ${Number(station.chargers_available || 0)}/${Number(station.chargers_total || 0)} chargers available
+                            </small>
+                            <div class="mt-2">
+                                <a class="btn btn-sm btn-outline-primary" target="_blank"
+                                   href="https://www.google.com/maps/dir/?api=1&destination=${Number(station.latitude)},${Number(station.longitude)}">
+                                   <i class="fas fa-location-arrow"></i> Directions
+                                </a>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+        } else if (!routeData.can_reach_without_charging) {
+            html += '<div class="alert alert-danger"><i class="fas fa-triangle-exclamation"></i> Your current battery may be insufficient. Use “Show Chargers” to inspect nearby charging stations.</div>';
+        }
+
+        document.getElementById('route-results').innerHTML = html;
+    }
+
+    async function loadNearbyStations() {
+        try {
+            const response = await fetch('/api/stations/', {headers:{Accept:'application/json'}});
+            if (!response.ok) throw new Error();
+            const data = await response.json();
+            allStations = Array.isArray(data) ? data : (data.results || []);
+
+            Object.values(stationMarkers).forEach(marker => map.removeLayer(marker));
+            stationMarkers = {};
+
+            allStations.filter(s => Number.isFinite(Number(s.latitude)) && Number.isFinite(Number(s.longitude))).forEach(station => {
+                const available = Number(station.chargers_available || 0);
+                const marker = L.marker([station.latitude, station.longitude], {
+                    icon:L.divIcon({
+                        className:'station-map-marker',
+                        html:`<div style="background:${available ? '#0d6efd' : '#6c757d'};width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;border:2px solid white;box-shadow:0 2px 6px #555"><i class="fas fa-bolt"></i></div>`,
+                        iconSize:[30,30], iconAnchor:[15,15]
+                    })
+                }).bindPopup(`
+                    <strong>${escapeHtml(station.name)}</strong><br>
+                    ${available}/${Number(station.chargers_total || 0)} available<br>
+                    ${Number(station.power_capacity || 0)} kW
+                `).addTo(map);
+                stationMarkers[station.id] = marker;
+            });
+
+            document.getElementById('planner-status').textContent = `${allStations.length} charging stations loaded on map.`;
+        } catch {
+            alert('Unable to load charging stations from /api/stations/.');
+        }
+    }
+
+    function useCurrentLocation() {
+        if (!navigator.geolocation) return alert('Geolocation is not supported by this browser.');
+        document.getElementById('planner-status').textContent = 'Getting your current location...';
+        navigator.geolocation.getCurrentPosition(
+            pos => {
+                document.getElementById('origin-lat').value = pos.coords.latitude.toFixed(6);
+                document.getElementById('origin-lon').value = pos.coords.longitude.toFixed(6);
+                map.setView([pos.coords.latitude, pos.coords.longitude], 13);
+                document.getElementById('planner-status').textContent = 'Current location set as route origin.';
+            },
+            () => alert('Location permission was not granted.')
+        );
+    }
+
+    function swapLocations() {
+        const a = document.getElementById('origin-lat');
+        const b = document.getElementById('origin-lon');
+        const c = document.getElementById('dest-lat');
+        const d = document.getElementById('dest-lon');
+        [a.value, c.value] = [c.value, a.value];
+        [b.value, d.value] = [d.value, b.value];
+    }
+
+    function resetRoutePlanner() {
+        document.getElementById('origin-lat').value = '28.6139';
+        document.getElementById('origin-lon').value = '77.2090';
+        document.getElementById('dest-lat').value = '27.1767';
+        document.getElementById('dest-lon').value = '78.0081';
+        document.getElementById('current-battery').value = '75';
+        document.getElementById('battery-capacity').value = '75';
+        document.getElementById('reserve-battery').value = '15';
+        document.getElementById('consumption-rate').value = '16';
+        clearRouteLayers();
+        map.setView([28.6139,77.2090],7);
+        document.getElementById('route-results').textContent = 'Enter route details and click "Suggest Route" to see recommendations.';
+        document.getElementById('charging-stop-count').textContent = '--';
+        document.getElementById('estimated-cost').textContent = '₹--';
+        document.getElementById('planner-status').textContent = 'Route planner reset.';
+        updateRangeEstimate();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initMap();
+        updateRangeEstimate();
+        ['current-battery','battery-capacity','reserve-battery','consumption-rate'].forEach(id => {
+            document.getElementById(id)?.addEventListener('input', updateRangeEstimate);
+        });
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h2">
+                <i class="fas fa-route"></i> Route Planner
+            </h1>
+            <p class="text-muted">Plan your EV route with intelligent charging stop suggestions</p>
+        </div>
+    </div>
+
+    <!-- Planning Panel -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Route Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label class="form-label">Origin Latitude</label>
+                            <input type="number" class="form-control" id="origin-lat" value="28.6139" step="0.0001">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Origin Longitude</label>
+                            <input type="number" class="form-control" id="origin-lon" value="77.2090" step="0.0001">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Destination Latitude</label>
+                            <input type="number" class="form-control" id="dest-lat" value="27.1767" step="0.0001">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Destination Longitude</label>
+                            <input type="number" class="form-control" id="dest-lon" value="78.0081" step="0.0001">
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Current Battery (kWh)</label>
+                            <input type="number" class="form-control" id="current-battery" value="75" min="0">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Battery Capacity (kWh)</label>
+                            <input type="number" class="form-control" id="battery-capacity" value="75" min="0">
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <button class="btn btn-primary w-100" onclick="suggestRoute()">
+                                <i class="fas fa-route"></i> Suggest Route
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- AI Route Intelligence -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <small class="text-muted">Estimated Range</small>
+                    <h4 id="estimated-range" class="mb-1">-- km</h4>
+                    <small class="text-success"><i class="fas fa-battery-three-quarters"></i> Based on battery</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <small class="text-muted">Energy Efficiency</small>
+                    <h4 id="energy-efficiency" class="mb-1">-- kWh/100km</h4>
+                    <small class="text-primary"><i class="fas fa-leaf"></i> EV estimate</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <small class="text-muted">Charging Stops</small>
+                    <h4 id="charging-stop-count" class="mb-1">--</h4>
+                    <small class="text-warning"><i class="fas fa-charging-station"></i> Recommended</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <small class="text-muted">Estimated Cost</small>
+                    <h4 id="estimated-cost" class="mb-1">₹--</h4>
+                    <small class="text-info"><i class="fas fa-indian-rupee-sign"></i> Charging estimate</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-brain"></i> AI Route Preferences</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Route Mode</label>
+                    <select class="form-select" id="route-mode">
+                        <option value="balanced">AI Balanced</option>
+                        <option value="fastest">Fastest</option>
+                        <option value="eco">Most Energy Efficient</option>
+                        <option value="charging">Best Charging Coverage</option>
+                    </select>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Minimum Arrival Battery</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="reserve-battery" value="15" min="5" max="50">
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Energy Consumption</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="consumption-rate" value="16" min="5" step="0.5">
+                        <span class="input-group-text">kWh/100km</span>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Charging Price</label>
+                    <div class="input-group">
+                        <span class="input-group-text">₹</span>
+                        <input type="number" class="form-control" id="charging-price" value="12" min="0" step="0.5">
+                        <span class="input-group-text">/kWh</span>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-3 mt-1">
+                <div class="col-lg-3 col-md-6">
+                    <button class="btn btn-outline-primary w-100" onclick="useCurrentLocation()">
+                        <i class="fas fa-location-crosshairs"></i> Use My Location
+                    </button>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <button class="btn btn-outline-success w-100" onclick="swapLocations()">
+                        <i class="fas fa-right-left"></i> Swap Locations
+                    </button>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <button class="btn btn-outline-warning w-100" onclick="loadNearbyStations()">
+                        <i class="fas fa-charging-station"></i> Show Chargers
+                    </button>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <button class="btn btn-outline-secondary w-100" onclick="resetRoutePlanner()">
+                        <i class="fas fa-rotate-left"></i> Reset Route
+                    </button>
+                </div>
+            </div>
+            <div class="mt-3">
+                <small class="text-muted" id="planner-status">Ready to calculate an intelligent EV route.</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div class="row">
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-map"></i> Route Map</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div id="route-map" style="height: 500px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Route Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <div id="route-results" class="text-muted">
+                        Enter route details and click "Suggest Route" to see recommendations.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Map Legend</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <div style="display: inline-block; width: 30px; height: 30px; background: #16a34a; border-radius: 50%; margin-bottom: 0.5rem;"></div>
+                            <p><strong>Start</strong></p>
+                        </div>
+                        <div class="col-md-3">
+                            <div style="display: inline-block; width: 30px; height: 30px; background: #dc2626; border-radius: 50%; margin-bottom: 0.5rem;"></div>
+                            <p><strong>Destination</strong></p>
+                        </div>
+                        <div class="col-md-3">
+                            <div style="display: inline-block; width: 30px; height: 30px; background: #ea580c; border-radius: 50%; margin-bottom: 0.5rem; color: white; display: flex; align-items: center; justify-content: center;">1</div>
+                            <p><strong>Charging Stop</strong></p>
+                        </div>
+                        <div class="col-md-3">
+                            <svg width="30" height="30" style="display: inline-block; margin-bottom: 0.5rem;">
+                                <line x1="5" y1="15" x2="25" y2="15" stroke="#1e40af" stroke-width="3" />
+                            </svg>
+                            <p><strong>Route</strong></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
