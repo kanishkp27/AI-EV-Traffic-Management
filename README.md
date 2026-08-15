@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # AI-Based EV Traffic & Charging Management System for Expressways
 
 A comprehensive Django-based platform for real-time tracking, management, and optimization of electric vehicles on expressways with intelligent routing and charging station location services.
@@ -275,3 +276,7 @@ For issues, feature requests, or documentation updates, please open an issue in 
 ## Credits
 
 Built with Django, Leaflet.js, Chart.js, and Bootstrap. Data simulation based on realistic SF Bay Area expressway patterns.
+=======
+# AI-EV-Traffic-Management
+An AI-powered EV management platform for smart charging, route optimization, traffic monitoring, weather insights, and EV user management.
+>>>>>>> b266047b11beca1638354428e760c7982d4584dd
